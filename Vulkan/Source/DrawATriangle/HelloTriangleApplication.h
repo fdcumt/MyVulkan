@@ -18,17 +18,35 @@ public:
 
 private:
     GLFWwindow* window = nullptr;
-    VkInstance instance;
-    std::vector<VkExtensionProperties> extensions;
-    
+    VkInstance Instance;
+
+    std::vector<VkLayerProperties> AvailableLayers;
+    std::vector<char*> UsedValidationLayers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
+
+    VkDebugUtilsMessengerEXT DebugMessenger;
+
 private:
     void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
     void createInstance();
-    void GatherExtensionSupport();
 
+    std::vector<const char*> GetRequiredExtensions();
+    void PrintExtensionSupport();
     
+    bool CheckValidationLayerSupport();
+
+    void SetupDebugMessenger();
+    
+    void DestroyDebugUtilsMessengerEXT(VkInstance instance,
+        VkDebugUtilsMessengerEXT debugMessenger,
+        const VkAllocationCallbacks* pAllocator);
+
+    static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 };
 
