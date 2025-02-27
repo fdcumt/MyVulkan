@@ -4,22 +4,21 @@
 ########################################################################################
 
 #设置项目名称
-set(LibName "Main1__")
+set(LibName "Core")
 
 #静态连接库, 连接器->输入->附加依赖项
-set(LibItems "Utility;Math")
+set(LibItems "")
 
 # 设置宏
 set(PublicDefineList 
-	"")
+    "" )
+
 ################这里面所有路径都要填相对路径, 相对于当前目录所在的路径 begin ##########################
 
 
 #设置Include目录, Properties->C/C++->General->Additional Include Directories
 set(IncludeDirs
 		"."
-		"Utility"
-		"Math"
 	)
 
 #静态连接库,  连接器->常规->附加库目录
@@ -32,6 +31,7 @@ set(LibDirs
 #静态文件一般都输出到和sln同级的Libs目录中.
 set(OutputDir "${SlnAutoGenLibsDir}")
 
+
 GenLib( 
 		"${LibName}" 
 		"${CMAKE_CURRENT_SOURCE_DIR}" 
@@ -41,4 +41,3 @@ GenLib(
 		"${LibItems}" 
 		"${PublicDefineList}" 
 	  )
-	  

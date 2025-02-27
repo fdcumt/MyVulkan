@@ -21,10 +21,11 @@ set(SlnAutoGenLibsDir "${CMAKE_BINARY_DIR}/Libs")
 
 #开启项目文件夹
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-	
+set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "Z_CMakePredefinedTargets ")  # 设置为空
+
 project("${SlnName}")
 	
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 
-AddSlnSubDir("${CMAKE_SOURCE_DIR}")
+AddProjectToSln("${CMAKE_SOURCE_DIR}")
 

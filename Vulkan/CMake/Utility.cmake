@@ -57,14 +57,21 @@ function(GenIncludeABSDir IncludeAbsDirs IncludeDirs CurDir)
 endfunction(GenIncludeABSDir)
 
 #生成lib库
-function(GenLib LibName CurDir IncludeDirs LibDirs OutputDir)
+function(GenLib LibName CurDir IncludeDirs LibDirs OutputDir LibItems PublicDefineList)
 	#message("Begin Generate lib:${LibName}")
 	GenIncludeABSDir(IncludeAbsDirs "${IncludeDirs}" "${CurDir}" )
 	GetAbslutePaths(LibAbsDirs "${LibDirs}" "${CurDir}")
 	GetAbslutePaths(OutputAbsDir "${OutputDir}" "${CurDir}")
+	
+	# 获取相对路径
+	# 示例:CurDir:E:/MyVulkan/Vulkan/Source/Engine/Utility CMAKE_SOURCE_DIR:E:/MyVulkan/Vulkan/Source RelativePath:Engine
+	file(RELATIVE_PATH RelativePath ${CMAKE_SOURCE_DIR} ${CurDir}/..)
+	# message("GenLib CurDir:${CurDir} CMAKE_SOURCE_DIR:${CMAKE_SOURCE_DIR} RelativePath:${RelativePath}")
 
-	#所有文件保存在一个变量中		
+
+	#所有文件保存在一个变量中
 	file(GLOB_RECURSE all_files *.h *.cpp *.c *.cc)
+	# message("GenLib CurDir:${CurDir}")
 	AddFiltersForVS("${all_files}" "${CurDir}")
 	
 	#********这种方法设置后, Output目录后边不会添加Release/debug***********
@@ -85,6 +92,11 @@ function(GenLib LibName CurDir IncludeDirs LibDirs OutputDir)
 	endif(MSVC)
 	
 	add_library("${LibName}" "${all_files}")
+	#target_compile_definitions("${LibName}" PUBLIC SPDLOG_COMPILED_LIB)
+	foreach(PublicDefine IN LISTS PublicDefineList)
+		message("GenLib LibName:${LibName} PublicDefine:${PublicDefine}")
+		target_compile_definitions("${LibName}" PUBLIC ${PublicDefine})
+	endforeach()
 	
 	# Properties->C/C++->General->Additional Include Directories
 	include_directories("${IncludeAbsDirs}")
@@ -98,7 +110,8 @@ function(GenLib LibName CurDir IncludeDirs LibDirs OutputDir)
 	target_link_directories("${LibName}" PUBLIC "${LibAbsDirs}")
 	
 	# Creates a folder "libraries" and adds target this project under it
-	set_property(TARGET "${LibName}" PROPERTY FOLDER "Libraries")
+	#set_property(TARGET "${LibName}" PROPERTY FOLDER ${Libs})
+	set_property(TARGET "${LibName}" PROPERTY FOLDER ${RelativePath})
 	
 	#message("Succeed Generate lib:${LibName}")
 endfunction(GenLib)
@@ -109,6 +122,11 @@ function(GenEXE ExeName CurDir IncludeDirs LibDirs OutputDir)
 	GenIncludeABSDir(IncludeAbsDirs "${IncludeDirs}" "${CurDir}")
 	GetAbslutePaths(LibAbsDirs "${LibDirs}" "${CurDir}")
 	GetAbslutePaths(OutputAbsDir "${OutputDir}" "${CurDir}")
+	
+	# 获取相对路径
+	# 示例:CurDir:E:/MyVulkan/Vulkan/Source/Engine/Utility CMAKE_SOURCE_DIR:E:/MyVulkan/Vulkan/Source RelativePath:Engine
+	file(RELATIVE_PATH RelativePath ${CMAKE_SOURCE_DIR} ${CurDir}/..)
+	# message("GenLib CurDir:${CurDir} CMAKE_SOURCE_DIR:${CMAKE_SOURCE_DIR} RelativePath:${RelativePath}")
 
 	#所有文件保存在一个变量中		
 	file(GLOB_RECURSE all_files *.h *.cpp *.c *.cc)
@@ -127,7 +145,8 @@ function(GenEXE ExeName CurDir IncludeDirs LibDirs OutputDir)
 	target_link_directories("${ExeName}" PUBLIC "${LibAbsDirs}")
 	
 	#Creates a folder "libraries" and adds target project (math.vcproj) under it
-	set_property(TARGET "${ExeName}" PROPERTY FOLDER "Executables")
+	#set_property(TARGET "${ExeName}" PROPERTY FOLDER "Executables")
+	set_property(TARGET "${ExeName}" PROPERTY FOLDER ${RelativePath})
 
 	#Properties->General->Output Directory
 	set_target_properties("${ExeName}" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${OutputAbsDir}")
@@ -147,7 +166,8 @@ endfunction(GenEXE)
 #	endforeach()
 #endfunction(AddSlnSubDir)
 
-function(AddSlnSubDir CurDir)
+# 将文件包含到项目中
+function(AddProjectToSln CurDir)
 	#遍历sln文件夹,获取文件夹下所有含有CMakeLists.txt的项目
 	#file(GLOB_RECURSE CMakeFiles RELATIVE "${CurDir}" CMakeLists.txt)
 	file(GLOB_RECURSE CMakeFiles CMakeLists.txt)
@@ -158,4 +178,4 @@ function(AddSlnSubDir CurDir)
 			add_subdirectory("${FileDir}")
 		endif(NOT bEqual)
 	endforeach()
-endfunction(AddSlnSubDir)
+endfunction(AddProjectToSln)

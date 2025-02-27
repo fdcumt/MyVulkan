@@ -3,28 +3,32 @@
 #################### !!! this is lib makefile !!! ##################################
 ########################################################################################
 
+
+
 #设置项目名称
-set(LibName "Main1__")
+set (LibName "Log")
 
 #静态连接库, 连接器->输入->附加依赖项
-set(LibItems "Utility;Math")
+set(LibItems "Utility")
 
-# 设置宏
-set(PublicDefineList 
-	"")
+
 ################这里面所有路径都要填相对路径, 相对于当前目录所在的路径 begin ##########################
 
-
 #设置Include目录, Properties->C/C++->General->Additional Include Directories
-set(IncludeDirs
+set(IncludeDirs 
 		"."
 		"Utility"
-		"Math"
 	)
+	
+# 设置宏
+set(PublicDefineList 
+    "SPDLOG_COMPILED_LIB" 
+    "FMT_UNICODE=0" 
+    )
 
 #静态连接库,  连接器->常规->附加库目录
-set(LibDirs
-	"${SlnDir}/Libs"
+set(LibDirs 
+	"${SlnDir}/Libs" 
 	"${SlnAutoGenLibsDir}"
 	)
 
@@ -32,6 +36,7 @@ set(LibDirs
 #静态文件一般都输出到和sln同级的Libs目录中.
 set(OutputDir "${SlnAutoGenLibsDir}")
 
+################这里面所有路径都要填相对路径, 相对于当前目录所在的路径  end  ##########################
 GenLib( 
 		"${LibName}" 
 		"${CMAKE_CURRENT_SOURCE_DIR}" 

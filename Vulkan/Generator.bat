@@ -1,4 +1,4 @@
-::%1 mshta vbscript:CreateObject("Shell.Application").ShellExecute("cmd.exe","/c %~s0 ::","","runas",1)(window.close)&&exit
+%1 mshta vbscript:CreateObject("Shell.Application").ShellExecute("cmd.exe","/c %~s0 ::","","runas",1)(window.close)&&exit
 
 echo off
 
@@ -110,6 +110,7 @@ set SHORTCUT="%SlnUrl%"
 mklink %SHORTCUT% %TARGET% || goto Failed
 
 :Succeed
+echo "Succeed"
 pause
 exit
 
