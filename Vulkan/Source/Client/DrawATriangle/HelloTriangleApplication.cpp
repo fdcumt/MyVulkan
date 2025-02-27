@@ -2,20 +2,22 @@
 #include <vector>
 #include <iostream>
 
+#include "Log.h"
+
 VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-            VkDebugUtilsMessageTypeFlagsEXT messageType,
-            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-            void* pUserData)
+                       VkDebugUtilsMessageTypeFlagsEXT messageType,
+                       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                       void* pUserData)
 {
     if (messageSeverity >= VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+        ErrorLog("validation layer:%s", pCallbackData->pMessage);
         return VK_FALSE;
     }
     else
     {
-        std::cout << "validation layer: " << pCallbackData->pMessage << std::endl;
-        return VK_FALSE;
+        DebugLog("validation layer:%s", pCallbackData->pMessage);
+        return VK_SUCCESS;
     }
 }
 
@@ -165,10 +167,10 @@ void HelloTriangleApplication::PrintExtensionSupport()
     extensions.resize(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
-    std::cout << "available extensions:\n";
+    DebugLog("available extensions:");
     for (const auto& extension : extensions)
     {
-        std::cout << '\t' << extension.extensionName << '\n';
+        DebugLog("extension:%s", extension.extensionName);
     }
 }
 
@@ -196,11 +198,11 @@ bool HelloTriangleApplication::CheckValidationLayerSupport()
         bAllSupport = bAllSupport && LayerFound;
         if (!LayerFound)
         {
-            std::cout << "Do not support " << LayerName << '\n';
+            WarningLog("Do not support %s", LayerName);
         }
         else
         {
-            std::cout << "Support " << LayerName << '\n';
+            DebugLog("Support LayerName:%s", LayerName);
         }
     }
 
