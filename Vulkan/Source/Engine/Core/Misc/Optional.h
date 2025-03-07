@@ -1,5 +1,7 @@
 #pragma once
 #include "GenericPlatform/GenericPlatform.h"
+#include "Misc/AssertionMacros.h"
+
 
 enum class EInPlace : uint8 {InPlace};
 
@@ -9,7 +11,7 @@ class TOptional
 	using ElementType = T;
 	using DataType = typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type;
 public:
-	TOptional(const ElementType& Other)
+	explicit TOptional(const ElementType& Other)
 	: bSet(true)
 	{
 		Emplace(Other);
@@ -20,11 +22,7 @@ public:
 	{
 	}
 
-	template <typename... ArgTypes>
-	explicit TOptional(ArgTypes&&... Args)
-	{
-		Emplace(std::forward<ArgTypes>(Args)...);
-	}
+
 
 	TOptional& operator = (const TOptional& Other)
 	{
@@ -33,7 +31,7 @@ public:
 			Reset();
 			if (Other.bSet)
 			{
-				Emplace(*(ElementType*)(&Other.Value));
+				Emplace(*Other.GetValuePtr());
 				bSet = true;
 			}
 		}
@@ -47,7 +45,7 @@ public:
 		{
 			if (Other.bSet)
 			{
-				Emplace(*(ElementType*)(&Other.Value));
+				Emplace(*Other.GetValuePtr());
 			}
 			bSet = true;
 		}
@@ -57,7 +55,7 @@ public:
 	
 	TOptional& operator = (const ElementType& Other)
 	{
-		if (&Other != &Value)
+		if (&Other != GetValuePtr())
 		{
 			Reset();
 			bSet = true;
@@ -69,7 +67,7 @@ public:
 
 	TOptional& operator = (const ElementType&& Other)
 	{
-		if (&Other != &Value)
+		if (&Other != GetValuePtr())
 		{
 			Reset();
 			bSet = true;
@@ -82,13 +80,25 @@ public:
 	ElementType& operator*() 
 	{
 		check(IsSet());
-		return *(ElementType*)(&Value);
+		return *GetValuePtr();
+	}
+
+	ElementType& ValueRef() 
+	{
+		check(IsSet());
+		return *GetValuePtr();
+	}
+
+	ElementType GetValue() 
+	{
+		check(IsSet());
+		return *GetValuePtr();
 	}
 
 	const ElementType& operator*() const
 	{
 		check(IsSet());
-		return *(ElementType*)(&Value);
+		return *GetValuePtr();
 	}
 	
 	inline explicit operator bool() const
@@ -106,22 +116,32 @@ public:
 		if (bSet)
 		{
 			bSet = false;
-			reinterpret_cast<ElementType*>(&Value)->~ElementType();
+			GetValuePtr()->~ElementType();
 		}
 	}
 	
 private:
 	template <typename... ArgsType>
-	ElementType& Emplace(ArgsType&&... Args)
+	void Emplace(ArgsType&&... Args)
 	{
 		Reset();
 		bSet = true;
-		new (&Value) ElementType(std::forward<ArgsType>(Args)...);
+		new (&Data) ElementType(std::forward<ArgsType>(Args)...);
+	}
+
+	ElementType* GetValuePtr() const
+	{
+		return (ElementType*)(&Data);
+	}
+	
+	ElementType* GetValuePtr()
+	{
+		return (ElementType*)(&Data);
 	}
 	
 private:
 	bool bSet = false;
-	DataType Value;
+	DataType Data;
 };
 
 

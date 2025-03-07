@@ -1,6 +1,7 @@
 #include "HelloTriangleApplication.h"
 #include <vector>
 #include <iostream>
+#include <set>
 
 #include "Log.h"
 
@@ -23,14 +24,14 @@ VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 
 void HelloTriangleApplication::run()
 {
-    initWindow();
-    initVulkan();
-    mainLoop();
-    cleanup();
+    InitWindow();
+    InitVulkan();
+    MainLoop();
+    Cleanup();
     system("pause");
 }
 
-void HelloTriangleApplication::initWindow()
+void HelloTriangleApplication::InitWindow()
 {
     glfwInit();
 
@@ -40,10 +41,64 @@ void HelloTriangleApplication::initWindow()
     Window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 }
 
-void HelloTriangleApplication::initVulkan()
+void HelloTriangleApplication::InitVulkan()
 {
     CreateInstance();
     SetupDebugMessenger();
+    CreateSurface();
+    PickPhysicalDevice();
+    CreateLogicDevice();
+}
+
+void HelloTriangleApplication::CreateSurface()
+{
+    VkWin32SurfaceCreateInfoKHR CreateInfo{};
+    CreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    CreateInfo.hwnd = glfwGetWin32Window(Window);
+    CreateInfo.hinstance = GetModuleHandle(nullptr);
+    if (vkCreateWin32SurfaceKHR(Instance, &CreateInfo, nullptr, &Surface) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create window surface!");
+    }
+}
+
+void HelloTriangleApplication::CreateLogicDevice()
+{
+    FQueueFamilyIndices indices = FindQueueFamily(PhysicalDevice);
+
+    
+    std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos{};
+    std::set<uint32> UniqueQueueFamilies = {indices.GraphicsFamily.GetValue(), indices.PresentFamily.GetValue()};
+
+    float queuePriority = 1.0f;
+    for (uint32 UniqueQueueFamily : UniqueQueueFamilies)
+    {
+        VkDeviceQueueCreateInfo DeviceQueueCreateInfo;
+        DeviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        DeviceQueueCreateInfo.queueFamilyIndex = UniqueQueueFamily;
+        DeviceQueueCreateInfo.queueCount = 1;
+        DeviceQueueCreateInfo.pQueuePriorities = &queuePriority;
+        QueueCreateInfos.push_back(DeviceQueueCreateInfo);
+    }
+    
+    VkPhysicalDeviceFeatures deviceFeatures{};
+
+    VkDeviceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pQueueCreateInfos = QueueCreateInfos.data();
+    createInfo.queueCreateInfoCount = (uint32)QueueCreateInfos.size();
+    createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.enabledExtensionCount = 0;
+    createInfo.enabledLayerCount = static_cast<uint32_t>(UsedValidationLayers.size());
+    createInfo.ppEnabledLayerNames = UsedValidationLayers.data();
+
+    VkResult Result = vkCreateDevice(PhysicalDevice, &createInfo, nullptr, &LogicDevice);
+    if ( Result!= VK_SUCCESS) {
+        throw std::runtime_error("failed to create logical device!");
+    }
+    
+    vkGetDeviceQueue(LogicDevice, indices.GraphicsFamily.ValueRef(), 0, &GraphicsQueue);
+    vkGetDeviceQueue(LogicDevice, indices.PresentFamily.ValueRef(), 0, &PresentQueue);
 }
 
 void HelloTriangleApplication::PickPhysicalDevice()
@@ -109,7 +164,7 @@ int HelloTriangleApplication::CalDeviceScore(VkPhysicalDevice InDevice)
     return score;
 }
 
-void HelloTriangleApplication::mainLoop()
+void HelloTriangleApplication::MainLoop()
 {
     while (!glfwWindowShouldClose(Window))
     {
@@ -117,9 +172,10 @@ void HelloTriangleApplication::mainLoop()
     }
 }
 
-void HelloTriangleApplication::cleanup()
+void HelloTriangleApplication::Cleanup()
 {
     DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
+    vkDestroySurfaceKHR(Instance, Surface, nullptr);
     vkDestroyInstance(Instance, nullptr);
     PhysicalDevice = VK_NULL_HANDLE;
     glfwDestroyWindow(Window);
@@ -143,12 +199,12 @@ void HelloTriangleApplication::CreateInstance()
 
     // extensions
     std::vector<const char*> RequiredExtensions = GetRequiredExtensions();
-    createInfo.enabledExtensionCount = RequiredExtensions.size();
+    createInfo.enabledExtensionCount = static_cast<uint32>(RequiredExtensions.size());
     createInfo.ppEnabledExtensionNames = RequiredExtensions.data();
 
     // validation layer
     CheckValidationLayerSupport();
-    createInfo.enabledLayerCount = UsedValidationLayers.size();
+    createInfo.enabledLayerCount = static_cast<uint32>(UsedValidationLayers.size());
     createInfo.ppEnabledLayerNames = UsedValidationLayers.data();
 
     if (vkCreateInstance(&createInfo, nullptr, &Instance) != VK_SUCCESS)
@@ -229,10 +285,16 @@ void HelloTriangleApplication::SetupDebugMessenger()
 {
     VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType =
+        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = DebugCallback;
 
     VkResult Result = VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -246,6 +308,40 @@ void HelloTriangleApplication::SetupDebugMessenger()
     {
         throw std::runtime_error("failed to set up debug messenger!");
     }
+}
+
+FQueueFamilyIndices HelloTriangleApplication::FindQueueFamily(VkPhysicalDevice InDevice)
+{
+    FQueueFamilyIndices Indices;
+    uint32 QueueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(InDevice, &QueueFamilyCount, nullptr);
+    std::vector<VkQueueFamilyProperties> QueueFamilyProperties(QueueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(InDevice, &QueueFamilyCount, QueueFamilyProperties.data());
+    
+    for (uint32 i=0; i<QueueFamilyCount; ++i)
+    {
+        if (QueueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            Indices.GraphicsFamily = i;
+        }
+
+        VkBool32 PresentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(InDevice, i, Surface, &PresentSupport);
+
+        if (PresentSupport)
+        {
+            Indices.PresentFamily = i;
+        }
+
+        if (Indices.IsComplete())
+        {
+            break;
+        }
+    }
+
+    
+
+    return Indices;
 }
 
 void HelloTriangleApplication::DestroyDebugUtilsMessengerEXT(VkInstance instance,

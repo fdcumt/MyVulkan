@@ -1,19 +1,32 @@
 ﻿#pragma once
+
+#define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include "GLFW/glfw3native.h"
 #include <vector>
 #include "Misc/Optional.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-struct QueueFamilyIndices
+struct FQueueFamilyIndices
 {
-    TOptional<uint32_t> GraphicsFamily;
+    FQueueFamilyIndices() = default;
+    
+    FQueueFamilyIndices(const FQueueFamilyIndices& Other)
+    {
+        GraphicsFamily = Other.GraphicsFamily;
+        PresentFamily = Other.PresentFamily;
+    }
+    
+    TOptional<uint32> GraphicsFamily;
+    TOptional<uint32> PresentFamily;
 
     bool IsComplete() const
     {
-        return GraphicsFamily.IsSet();
+        return GraphicsFamily.IsSet() && PresentFamily.IsSet();
     }
 };
 
@@ -30,22 +43,34 @@ private:
     std::vector<char*> UsedValidationLayers =
     {
         "VK_LAYER_KHRONOS_validation"
+        //"VK_LAYER_LUNARG_standard_validation"
     };
 
     VkDebugUtilsMessengerEXT DebugMessenger;
-
+    
     VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
 
-private:
-    void initWindow();
+    FQueueFamilyIndices QueueFamilyIndices;
+    
+    VkDevice LogicDevice;
+    VkSurfaceKHR Surface;
 
-    void initVulkan();
+    VkQueue GraphicsQueue;
+    VkQueue PresentQueue;
+
+private:
+    void InitWindow();
+    void InitVulkan();
+    void CreateSurface();
+    void CreateLogicDevice();
+
+    
     void PickPhysicalDevice();
     bool IsDeviceSuitable(VkPhysicalDevice InDevice);
     int CalDeviceScore(VkPhysicalDevice InDevice);
 
-    void mainLoop();
-    void cleanup();
+    void MainLoop();
+    void Cleanup();
     void CreateInstance();
 
     std::vector<const char*> GetRequiredExtensions();
@@ -54,6 +79,8 @@ private:
     bool CheckValidationLayerSupport();
 
     void SetupDebugMessenger();
+
+    FQueueFamilyIndices FindQueueFamily(VkPhysicalDevice InDevice);
 
     void DestroyDebugUtilsMessengerEXT(VkInstance instance,
                                        VkDebugUtilsMessengerEXT debugMessenger,
