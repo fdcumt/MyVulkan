@@ -66,7 +66,7 @@ void HelloTriangleApplication::CreateLogicalDevice()
     float queuePriority = 1.0f;
     for (uint32 UniqueQueueFamily : UniqueQueueFamilies)
     {
-        VkDeviceQueueCreateInfo DeviceQueueCreateInfo;
+        VkDeviceQueueCreateInfo DeviceQueueCreateInfo{};
         DeviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         DeviceQueueCreateInfo.queueFamilyIndex = UniqueQueueFamily;
         DeviceQueueCreateInfo.queueCount = 1;
