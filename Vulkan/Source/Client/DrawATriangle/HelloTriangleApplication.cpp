@@ -5,6 +5,7 @@
 
 #include "Log.h"
 
+
 VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                        VkDebugUtilsMessageTypeFlagsEXT messageType,
                        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -47,25 +48,17 @@ void HelloTriangleApplication::InitVulkan()
     SetupDebugMessenger();
     CreateSurface();
     PickPhysicalDevice();
-    CreateLogicDevice();
+    CreateLogicalDevice();
 }
 
 void HelloTriangleApplication::CreateSurface()
 {
-    VkWin32SurfaceCreateInfoKHR CreateInfo{};
-    CreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    CreateInfo.hwnd = glfwGetWin32Window(Window);
-    CreateInfo.hinstance = GetModuleHandle(nullptr);
-    if (vkCreateWin32SurfaceKHR(Instance, &CreateInfo, nullptr, &Surface) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create window surface!");
-    }
+    check(glfwCreateWindowSurface(Instance, Window, nullptr, &Surface) == VK_SUCCESS);
 }
 
-void HelloTriangleApplication::CreateLogicDevice()
+void HelloTriangleApplication::CreateLogicalDevice()
 {
     FQueueFamilyIndices indices = FindQueueFamily(PhysicalDevice);
-
     
     std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos{};
     std::set<uint32> UniqueQueueFamilies = {indices.GraphicsFamily.GetValue(), indices.PresentFamily.GetValue()};
@@ -93,9 +86,7 @@ void HelloTriangleApplication::CreateLogicDevice()
     createInfo.ppEnabledLayerNames = UsedValidationLayers.data();
 
     VkResult Result = vkCreateDevice(PhysicalDevice, &createInfo, nullptr, &LogicDevice);
-    if ( Result!= VK_SUCCESS) {
-        throw std::runtime_error("failed to create logical device!");
-    }
+    check(Result==VK_SUCCESS);
     
     vkGetDeviceQueue(LogicDevice, indices.GraphicsFamily.ValueRef(), 0, &GraphicsQueue);
     vkGetDeviceQueue(LogicDevice, indices.PresentFamily.ValueRef(), 0, &PresentQueue);

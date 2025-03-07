@@ -1,12 +1,17 @@
 ﻿#pragma once
 
-#define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include "GLFW/glfw3native.h"
+
+#include <iostream>
+#include <stdexcept>
 #include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <optional>
+#include <set>
 #include "Misc/Optional.h"
+
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -62,7 +67,7 @@ private:
     void InitWindow();
     void InitVulkan();
     void CreateSurface();
-    void CreateLogicDevice();
+    void CreateLogicalDevice();
 
     
     void PickPhysicalDevice();
