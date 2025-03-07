@@ -2,14 +2,30 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
+static bool EnableFollowLog = true;
+
+#define VKFollowLogImpl(fmt, ...) if (EnableFollowLog){ \
+static char buffer[1024]; \
+int len = snprintf(buffer, sizeof(buffer), fmt, __VA_ARGS__); \
+if (len < sizeof(buffer)) { \
+spdlog::warn(buffer); \
+} else { \
+char* buf = new char[len + 1]; \
+snprintf(buf, len + 1, fmt, __VA_ARGS__); \
+spdlog::warn(buf); \
+delete[] buf; \
+}}
+
+#define VKFollowLog(fmt, ...) VKFollowLogImpl("[VKFollow]"##fmt, ##__VA_ARGS__) 
+
 #define InfoLog(fmt, ...) { \
     static char buffer[1024]; \
-    int len = snprintf(buffer, sizeof(buffer), fmt, __VA_ARGS__); \
+    int len = snprintf(buffer, sizeof(buffer), "[VKFollow]"##fmt, __VA_ARGS__); \
     if (len < sizeof(buffer)) { \
         spdlog::info(buffer); \
     } else { \
         char* buf = new char[len + 1]; \
-        snprintf(buf, len + 1, fmt, __VA_ARGS__); \
+        snprintf(buf, len + 1, "[VKFollow]"##fmt, __VA_ARGS__); \
         spdlog::info(buf); \
         delete[] buf; \
     }}

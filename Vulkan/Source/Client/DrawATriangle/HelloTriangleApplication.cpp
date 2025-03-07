@@ -3,7 +3,7 @@
 #include <iostream>
 #include <set>
 
-#include "Log.h"
+#include "Log/Log.h"
 
 
 VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -53,6 +53,7 @@ void HelloTriangleApplication::InitVulkan()
 
 void HelloTriangleApplication::CreateSurface()
 {
+    VKFollowLog("glfwCreateWindowSurface");
     check(glfwCreateWindowSurface(Instance, Window, nullptr, &Surface) == VK_SUCCESS);
 }
 
@@ -85,15 +86,19 @@ void HelloTriangleApplication::CreateLogicalDevice()
     createInfo.enabledLayerCount = static_cast<uint32_t>(UsedValidationLayers.size());
     createInfo.ppEnabledLayerNames = UsedValidationLayers.data();
 
+    VKFollowLog("vkCreateDevice");
     VkResult Result = vkCreateDevice(PhysicalDevice, &createInfo, nullptr, &LogicDevice);
     check(Result==VK_SUCCESS);
-    
+
+    VKFollowLog("vkGetDeviceQueue for GraphicsQueue");
+    VKFollowLog("vkGetDeviceQueue for PresentQueue");
     vkGetDeviceQueue(LogicDevice, indices.GraphicsFamily.ValueRef(), 0, &GraphicsQueue);
     vkGetDeviceQueue(LogicDevice, indices.PresentFamily.ValueRef(), 0, &PresentQueue);
 }
 
 void HelloTriangleApplication::PickPhysicalDevice()
 {
+    VKFollowLog("vkEnumeratePhysicalDevices for check PhysicalDevice Valid");
     uint32_t DeviceCount = 0;
     vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
     if (DeviceCount == 0)
@@ -124,7 +129,8 @@ bool HelloTriangleApplication::IsDeviceSuitable(VkPhysicalDevice InDevice)
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(InDevice, &deviceProperties);
     vkGetPhysicalDeviceFeatures(InDevice, &deviceFeatures);
-
+    VKFollowLog("vkGetPhysicalDeviceProperties and vkGetPhysicalDeviceFeatures for check device suitable");
+    
     return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
         deviceFeatures.geometryShader;
 }
@@ -136,7 +142,7 @@ int HelloTriangleApplication::CalDeviceScore(VkPhysicalDevice InDevice)
     VkPhysicalDeviceFeatures DeviceFeatures;
     vkGetPhysicalDeviceProperties(InDevice, &DeviceProperties);
     vkGetPhysicalDeviceFeatures(InDevice, &DeviceFeatures);
-
+    VKFollowLog("vkGetPhysicalDeviceProperties and vkGetPhysicalDeviceFeatures for CalDeviceScore");
     // Discrete GPUs have a significant performance advantage
     if (DeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
     {
@@ -166,9 +172,15 @@ void HelloTriangleApplication::MainLoop()
 void HelloTriangleApplication::Cleanup()
 {
     DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
+    
+    VKFollowLog("vkDestroySurfaceKHR");
     vkDestroySurfaceKHR(Instance, Surface, nullptr);
+
+    VKFollowLog("vkDestroyInstance");
     vkDestroyInstance(Instance, nullptr);
     PhysicalDevice = VK_NULL_HANDLE;
+
+    VKFollowLog("glfwDestroyWindow");
     glfwDestroyWindow(Window);
 
     glfwTerminate();
@@ -198,6 +210,7 @@ void HelloTriangleApplication::CreateInstance()
     createInfo.enabledLayerCount = static_cast<uint32>(UsedValidationLayers.size());
     createInfo.ppEnabledLayerNames = UsedValidationLayers.data();
 
+    VKFollowLog("vkCreateInstance");
     if (vkCreateInstance(&createInfo, nullptr, &Instance) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create instance!");
@@ -213,7 +226,7 @@ void HelloTriangleApplication::PrintExtensionSupport()
     std::vector<VkExtensionProperties> extensions;
     extensions.resize(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
+    VKFollowLog("vkEnumerateInstanceExtensionProperties print extension support");
     DebugLog("available extensions:");
     for (const auto& extension : extensions)
     {
@@ -228,7 +241,8 @@ bool HelloTriangleApplication::CheckValidationLayerSupport()
 
     AvailableLayers.resize(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, AvailableLayers.data());
-
+    VKFollowLog("vkEnumerateInstanceLayerProperties for check Validation layer support");
+    
     bool bAllSupport = true;
     for (char* LayerName : UsedValidationLayers)
     {
@@ -261,6 +275,8 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
                                       const VkAllocationCallbacks* pAllocator,
                                       VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
+    VKFollowLog("vkGetInstanceProcAddr for CreateDebugUtilsMessengerEXT");
+
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr)
     {
@@ -288,6 +304,9 @@ void HelloTriangleApplication::SetupDebugMessenger()
         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = DebugCallback;
 
+
+    VKFollowLog("vkGetInstanceProcAddr for SetupDebugMessenger");
+
     VkResult Result = VK_ERROR_EXTENSION_NOT_PRESENT;
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr)
@@ -313,11 +332,13 @@ FQueueFamilyIndices HelloTriangleApplication::FindQueueFamily(VkPhysicalDevice I
     {
         if (QueueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
+            VKFollowLog("vkGetPhysicalDeviceQueueFamilyProperties for find queue family which support graphic");
             Indices.GraphicsFamily = i;
         }
 
         VkBool32 PresentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(InDevice, i, Surface, &PresentSupport);
+        VKFollowLog("vkGetPhysicalDeviceSurfaceSupportKHR for find queue family which support surface");
 
         if (PresentSupport)
         {

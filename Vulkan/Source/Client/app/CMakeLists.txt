@@ -8,7 +8,11 @@
 set (ExeName "App")
 
 #静态连接库, 连接器->输入->附加依赖项
-set(LibItems "Math")
+set(LibItems 
+    "glfw3.lib;vulkan-1.lib"
+    "Core"
+    "Log"
+    )
 
 
 ################这里面所有路径都要填相对路径, 相对于当前目录所在的路径 begin ##########################
@@ -16,19 +20,18 @@ set(LibItems "Math")
 #设置Include目录, Properties->C/C++->General->Additional Include Directories
 set(IncludeDirs 
 		"."
-		"Math"
-		"Utility"
-		"Main1__"
+		"Core"
+		"Log"
+		"${SlnDir}/Dependency/GLFW/Include/"
+		"${SlnDir}/Dependency/Vulkan/Include/"
 	)
 
 #静态连接库,  连接器->常规->附加库目录
 set(LibDirs 
-	"${SlnDir}/Libs"
+	"${SlnDir}/Dependency/GLFW/Lib_Win64_VC2022/"
+	"${SlnDir}/Dependency/Vulkan/Lib_Win64/"
 	"${SlnAutoGenLibsDir}"
 	)
-
-set(PublicDefineList 
-    "")
 
 #设置Output目录, Properties->General->Output Directory
 #静态文件一般都输出到和sln同级的Libs目录中.
@@ -45,3 +48,4 @@ GenEXE(
 		"${OutputDir}"
 		"${LibItems}"
 	  )
+

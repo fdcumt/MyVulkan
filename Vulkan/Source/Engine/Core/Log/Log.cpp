@@ -1,5 +1,6 @@
 #include "Log.h"
 
+#include "Misc/Path.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/stdout_sinks-inl.h"
 
@@ -11,8 +12,9 @@ void InitLog()
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     //console_sink->set_level(spdlog::level::trace);  // 设置文件日志等级
     //console_sink->set_pattern("[%T] [%l] %v");      // 设置日志格式
-    
-    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/my_log.txt", true);
+
+    std::string LogFullPath = FPath::GetLogDir();
+    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(LogFullPath+"vulkan_log.txt", true);
     //file_sink->set_level(spdlog::level::trace);  // 设置文件日志等级
    // file_sink->set_pattern("[%T] [%l] %v");      // 设置日志格式
 

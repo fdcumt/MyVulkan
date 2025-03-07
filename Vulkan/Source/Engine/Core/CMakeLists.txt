@@ -7,7 +7,7 @@
 set(LibName "Core")
 
 #静态连接库, 连接器->输入->附加依赖项
-set(LibItems "")
+set(LibItems "Log")
 
 # 设置宏
 set(PublicDefineList 
@@ -19,6 +19,8 @@ set(PublicDefineList
 #设置Include目录, Properties->C/C++->General->Additional Include Directories
 set(IncludeDirs
 		"."
+		"Core"
+        "Log"
 	)
 
 #静态连接库,  连接器->常规->附加库目录
