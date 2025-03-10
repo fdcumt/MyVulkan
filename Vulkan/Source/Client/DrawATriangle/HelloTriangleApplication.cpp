@@ -53,8 +53,14 @@ void HelloTriangleApplication::InitVulkan()
 
 void HelloTriangleApplication::CreateSurface()
 {
-    VKFollowLog("glfwCreateWindowSurface");
-    check(glfwCreateWindowSurface(Instance, Window, nullptr, &Surface) == VK_SUCCESS);
+    //check(glfwCreateWindowSurface(Instance, Window, nullptr, &Surface) == VK_SUCCESS);
+    VkWin32SurfaceCreateInfoKHR createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.hwnd = glfwGetWin32Window(Window);
+    createInfo.hinstance = GetModuleHandle(nullptr);
+
+    VKFollowLog("vkCreateWin32SurfaceKHR or use glfwCreateWindowSurface for create surface");
+    check(vkCreateWin32SurfaceKHR(Instance, &createInfo, nullptr, &Surface) == VK_SUCCESS);
 }
 
 void HelloTriangleApplication::CreateLogicalDevice()
