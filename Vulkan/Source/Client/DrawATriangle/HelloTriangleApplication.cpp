@@ -123,22 +123,14 @@ void HelloTriangleApplication::PickPhysicalDevice()
         }
     }
 
-    if (PhysicalDevice == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("failed to find a suitable GPU!");
-    }
+    check(PhysicalDevice != VK_NULL_HANDLE);
 }
 
 bool HelloTriangleApplication::IsDeviceSuitable(VkPhysicalDevice InDevice)
 {
-    VkPhysicalDeviceProperties deviceProperties;
-    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceProperties(InDevice, &deviceProperties);
-    vkGetPhysicalDeviceFeatures(InDevice, &deviceFeatures);
-    VKFollowLog("vkGetPhysicalDeviceProperties and vkGetPhysicalDeviceFeatures for check device suitable");
-    
-    return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-        deviceFeatures.geometryShader;
+    FQueueFamilyIndices Indices = FindQueueFamily(InDevice);
+    bool CheckResult = CheckDeviceExtensionSupport(InDevice);
+    return Indices.IsComplete() && CheckResult;
 }
 
 int HelloTriangleApplication::CalDeviceScore(VkPhysicalDevice InDevice)
@@ -165,6 +157,24 @@ int HelloTriangleApplication::CalDeviceScore(VkPhysicalDevice InDevice)
     }
 
     return score;
+}
+
+bool HelloTriangleApplication::CheckDeviceExtensionSupport(VkPhysicalDevice InDevice)
+{
+    VKFollowLog("CheckDeviceExtensionSupport by vkEnumerateDeviceExtensionProperties");
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(InDevice, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(InDevice, nullptr, &extensionCount, availableExtensions.data());
+    
+    std::set<std::string> requiredExtensions(DeviceExtensions.begin(), DeviceExtensions.end());
+    for (const auto& extension : availableExtensions)
+    {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
 }
 
 void HelloTriangleApplication::MainLoop()
