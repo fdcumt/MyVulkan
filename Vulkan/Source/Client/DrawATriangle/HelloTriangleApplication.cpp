@@ -88,18 +88,51 @@ void HelloTriangleApplication::CreateLogicalDevice()
     createInfo.pQueueCreateInfos = QueueCreateInfos.data();
     createInfo.queueCreateInfoCount = (uint32)QueueCreateInfos.size();
     createInfo.pEnabledFeatures = &deviceFeatures;
-    createInfo.enabledExtensionCount = 0;
-    createInfo.enabledLayerCount = static_cast<uint32_t>(UsedValidationLayers.size());
-    createInfo.ppEnabledLayerNames = UsedValidationLayers.data();
+    
+    createInfo.enabledExtensionCount = PhysicalDeviceExtensions.size();
+    createInfo.ppEnabledExtensionNames = PhysicalDeviceExtensions.data();
+    
+    createInfo.enabledLayerCount = static_cast<uint32_t>(UsedValidationLayersForVulkanInstance.size());
+    createInfo.ppEnabledLayerNames = UsedValidationLayersForVulkanInstance.data();
 
-    VKFollowLog("vkCreateDevice");
+    VKFollowLog("vkCreateDevice Create Vulkan Logic Device by physical device");
     VkResult Result = vkCreateDevice(PhysicalDevice, &createInfo, nullptr, &LogicDevice);
     check(Result==VK_SUCCESS);
 
     VKFollowLog("vkGetDeviceQueue for GraphicsQueue");
-    VKFollowLog("vkGetDeviceQueue for PresentQueue");
     vkGetDeviceQueue(LogicDevice, indices.GraphicsFamily.ValueRef(), 0, &GraphicsQueue);
+
+    VKFollowLog("vkGetDeviceQueue for PresentQueue");
     vkGetDeviceQueue(LogicDevice, indices.PresentFamily.ValueRef(), 0, &PresentQueue);
+}
+
+FSwapChainSupportDetails HelloTriangleApplication::QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice)
+{
+    FSwapChainSupportDetails Details;
+
+    VKFollowLog("vkGetPhysicalDeviceSurfaceCapabilitiesKHR for get surface capability");
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(InPhysicalDevice, Surface, &Details.Capabilities);
+
+    // fill the format
+    VKFollowLog("vkGetPhysicalDeviceSurfaceCapabilitiesKHR for get surface formats");
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(InPhysicalDevice, Surface, &formatCount, nullptr);
+    check(formatCount == 0);
+    Details.Formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(InPhysicalDevice, Surface, &formatCount, Details.Formats.data());
+    
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(InPhysicalDevice, Surface, &presentModeCount, nullptr);
+    check(presentModeCount == 0);
+    Details.PresentModes.resize(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(InPhysicalDevice, Surface, &presentModeCount, Details.PresentModes.data());
+    
+    return Details;
+}
+
+VkSurfaceFormatKHR HelloTriangleApplication::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats)
+{
+    
 }
 
 void HelloTriangleApplication::PickPhysicalDevice()
@@ -107,16 +140,13 @@ void HelloTriangleApplication::PickPhysicalDevice()
     VKFollowLog("vkEnumeratePhysicalDevices for check PhysicalDevice Valid");
     uint32_t DeviceCount = 0;
     vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
-    if (DeviceCount == 0)
-    {
-        throw std::runtime_error("failed to find GPUs with Vulkan support!");
-    }
+    check(DeviceCount != 0);
 
     std::vector<VkPhysicalDevice> Devices(DeviceCount);
     vkEnumeratePhysicalDevices(Instance, &DeviceCount, Devices.data());
     for (VkPhysicalDevice Device : Devices)
     {
-        if (IsDeviceSuitable(Device))
+        if (IsPhysicalDeviceSuitable(Device))
         {
             PhysicalDevice = Device;
             break;
@@ -124,13 +154,18 @@ void HelloTriangleApplication::PickPhysicalDevice()
     }
 
     check(PhysicalDevice != VK_NULL_HANDLE);
+    PrintSelectedVulkanPhysicalDevice();
+    PrintVulkanPhysicalDevicesInThisComputer();
+    PrintVulkanPhysicalDeviceExtensionSupports();
 }
 
-bool HelloTriangleApplication::IsDeviceSuitable(VkPhysicalDevice InDevice)
+bool HelloTriangleApplication::IsPhysicalDeviceSuitable(VkPhysicalDevice InDevice)
 {
-    FQueueFamilyIndices Indices = FindQueueFamily(InDevice);
-    bool CheckResult = CheckDeviceExtensionSupport(InDevice);
-    return Indices.IsComplete() && CheckResult;
+    bool CheckResult = FindQueueFamily(InDevice).IsComplete() &&
+            CheckDeviceExtensionSupport(InDevice) &&
+            QuerySwapChainSupport(InDevice).IsValid();
+    
+    return CheckResult;
 }
 
 int HelloTriangleApplication::CalDeviceScore(VkPhysicalDevice InDevice)
@@ -168,7 +203,7 @@ bool HelloTriangleApplication::CheckDeviceExtensionSupport(VkPhysicalDevice InDe
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
     vkEnumerateDeviceExtensionProperties(InDevice, nullptr, &extensionCount, availableExtensions.data());
     
-    std::set<std::string> requiredExtensions(DeviceExtensions.begin(), DeviceExtensions.end());
+    std::set<std::string> requiredExtensions(PhysicalDeviceExtensions.begin(), PhysicalDeviceExtensions.end());
     for (const auto& extension : availableExtensions)
     {
         requiredExtensions.erase(extension.extensionName);
@@ -223,30 +258,74 @@ void HelloTriangleApplication::CreateInstance()
 
     // validation layer
     CheckValidationLayerSupport();
-    createInfo.enabledLayerCount = static_cast<uint32>(UsedValidationLayers.size());
-    createInfo.ppEnabledLayerNames = UsedValidationLayers.data();
+    createInfo.enabledLayerCount = static_cast<uint32>(UsedValidationLayersForVulkanInstance.size());
+    createInfo.ppEnabledLayerNames = UsedValidationLayersForVulkanInstance.data();
 
     VKFollowLog("vkCreateInstance");
-    if (vkCreateInstance(&createInfo, nullptr, &Instance) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create instance!");
-    }
-
-    PrintExtensionSupport();
+    check(vkCreateInstance(&createInfo, nullptr, &Instance) == VK_SUCCESS);
+    PrintVulkanInstanceExtensionSupports();
 }
 
-void HelloTriangleApplication::PrintExtensionSupport()
+void HelloTriangleApplication::PrintVulkanInstanceExtensionSupports()
 {
     uint32_t extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
     std::vector<VkExtensionProperties> extensions;
     extensions.resize(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-    VKFollowLog("vkEnumerateInstanceExtensionProperties print extension support");
-    DebugLog("available extensions:");
+    VKFollowLog("vkEnumerateInstanceExtensionProperties print vulkan instance extension support");
+    DebugLog("available vulkan instance extensions:");
     for (const auto& extension : extensions)
     {
-        DebugLog("extension:%s", extension.extensionName);
+        DebugLog("    extension:%s", extension.extensionName);
+    }
+}
+
+void HelloTriangleApplication::PrintSelectedVulkanPhysicalDevice()
+{
+    VkPhysicalDeviceProperties deviceProperties{};
+    vkGetPhysicalDeviceProperties(PhysicalDevice, &deviceProperties);
+    DebugLog("SelectedPhysicalDeviceProperties---deviceName[%s] deviceType[%lu] vendorID[%lu] deviceID[%lu] apiVersion[%lu]",
+        deviceProperties.deviceName,
+        deviceProperties.deviceType,
+        deviceProperties.vendorID,
+        deviceProperties.deviceID,
+        deviceProperties.apiVersion);
+}
+
+void HelloTriangleApplication::PrintVulkanPhysicalDevicesInThisComputer()
+{
+    uint32_t DeviceCount = 0;
+    vkEnumeratePhysicalDevices(Instance, &DeviceCount, nullptr);
+    std::vector<VkPhysicalDevice> Devices(DeviceCount);
+    vkEnumeratePhysicalDevices(Instance, &DeviceCount, Devices.data());
+
+    for (VkPhysicalDevice Device : Devices)
+    {
+        VkPhysicalDeviceProperties deviceProperties{};
+        vkGetPhysicalDeviceProperties(Device, &deviceProperties);
+        DebugLog("PhysicalDeviceProperties---deviceName[%s] deviceType[%lu] vendorID[%lu] deviceID[%lu] apiVersion[%lu]",
+            deviceProperties.deviceName,
+            deviceProperties.deviceType,
+            deviceProperties.vendorID,
+            deviceProperties.deviceID,
+            deviceProperties.apiVersion);
+    }
+    
+}
+
+void HelloTriangleApplication::PrintVulkanPhysicalDeviceExtensionSupports()
+{
+    uint32_t extensionCount = 0;
+    vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> extensions;
+    extensions.resize(extensionCount);
+    vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &extensionCount, extensions.data());
+    VKFollowLog("vkEnumerateDeviceExtensionProperties print vulkan device extension support");
+    DebugLog("available vulkan physical device extensions:");
+    for (const auto& extension : extensions)
+    {
+        DebugLog("    extension:%s", extension.extensionName);
     }
 }
 
@@ -260,7 +339,7 @@ bool HelloTriangleApplication::CheckValidationLayerSupport()
     VKFollowLog("vkEnumerateInstanceLayerProperties for check Validation layer support");
     
     bool bAllSupport = true;
-    for (char* LayerName : UsedValidationLayers)
+    for (char* LayerName : UsedValidationLayersForVulkanInstance)
     {
         bool LayerFound = false;
         for (const VkLayerProperties& LayerProperties : AvailableLayers)

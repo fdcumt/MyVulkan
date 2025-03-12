@@ -38,6 +38,18 @@ struct FQueueFamilyIndices
     }
 };
 
+struct FSwapChainSupportDetails
+{
+    VkSurfaceCapabilitiesKHR Capabilities;
+    std::vector<VkSurfaceFormatKHR> Formats;
+    std::vector<VkPresentModeKHR> PresentModes;
+
+    bool IsValid() const
+    {
+        return !Formats.empty() && PresentModes.empty();
+    }
+};
+
 class HelloTriangleApplication
 {
 public:
@@ -48,13 +60,14 @@ private:
     VkInstance Instance;
 
     std::vector<VkLayerProperties> AvailableLayers;
-    std::vector<char*> UsedValidationLayers =
+    std::vector<char*> UsedValidationLayersForVulkanInstance =
     {
         "VK_LAYER_KHRONOS_validation"
         //"VK_LAYER_LUNARG_standard_validation"
     };
-    
-    const std::vector<const char*> DeviceExtensions =
+
+    // use for check physical device support and used in create logic device
+    const std::vector<const char*> PhysicalDeviceExtensions =
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
@@ -67,7 +80,7 @@ private:
     FQueueFamilyIndices QueueFamilyIndices;
     
     VkDevice LogicDevice;
-    VkSurfaceKHR Surface;
+    VkSurfaceKHR Surface; // Vulkan Instance extension
 
     VkQueue GraphicsQueue;
     VkQueue PresentQueue;
@@ -78,9 +91,12 @@ private:
     void CreateSurface();
     void CreateLogicalDevice();
 
+    FSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice);
+    VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats);
+
     
     void PickPhysicalDevice();
-    bool IsDeviceSuitable(VkPhysicalDevice InDevice);
+    bool IsPhysicalDeviceSuitable(VkPhysicalDevice InDevice);
     int CalDeviceScore(VkPhysicalDevice InDevice);
 
     bool CheckDeviceExtensionSupport(VkPhysicalDevice InDevice);
@@ -90,7 +106,10 @@ private:
     void CreateInstance();
 
     std::vector<const char*> GetRequiredExtensions();
-    void PrintExtensionSupport();
+    void PrintVulkanInstanceExtensionSupports();
+    void PrintSelectedVulkanPhysicalDevice();
+    void PrintVulkanPhysicalDevicesInThisComputer();
+    void PrintVulkanPhysicalDeviceExtensionSupports();
 
     bool CheckValidationLayerSupport();
 
