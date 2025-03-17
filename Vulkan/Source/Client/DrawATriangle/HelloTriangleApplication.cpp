@@ -2,8 +2,9 @@
 #include <vector>
 #include <iostream>
 #include <set>
-
+#include <limits>
 #include "Log/Log.h"
+#include "Math/MathUtility.h"
 
 
 VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -49,6 +50,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateSurface();
     PickPhysicalDevice();
     CreateLogicalDevice();
+    CreateSwapChain();
 }
 
 void HelloTriangleApplication::CreateSurface()
@@ -106,6 +108,62 @@ void HelloTriangleApplication::CreateLogicalDevice()
     vkGetDeviceQueue(LogicDevice, indices.PresentFamily.ValueRef(), 0, &PresentQueue);
 }
 
+void HelloTriangleApplication::CreateSwapChain()
+{
+    FSwapChainSupportDetails SwapChainSupport = QuerySwapChainSupport(PhysicalDevice);
+
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(SwapChainSupport.Formats);
+    VkPresentModeKHR presentMode = ChooseSwapPresentMode(SwapChainSupport.PresentModes);
+    VkExtent2D extent = ChooseSwapExtent(SwapChainSupport.Capabilities);
+
+    uint32 ImageCount = SwapChainSupport.Capabilities.minImageCount+1;
+    if (SwapChainSupport.Capabilities.maxImageCount>0 && ImageCount>SwapChainSupport.Capabilities.maxImageCount)
+    {
+        ImageCount = SwapChainSupport.Capabilities.maxImageCount;
+    }
+
+    VkSwapchainCreateInfoKHR createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.surface = Surface;
+    createInfo.minImageCount = ImageCount;
+    SwapChainImageFormat = createInfo.imageFormat = surfaceFormat.format;
+    createInfo.imageColorSpace = surfaceFormat.colorSpace;
+    SwapChainExtent = createInfo.imageExtent = extent;
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    FQueueFamilyIndices indices = FindQueueFamily(PhysicalDevice);
+    uint32_t queueFamilyIndices[] = {indices.GraphicsFamily.GetValue(), indices.PresentFamily.GetValue()};
+
+    if (indices.GraphicsFamily != indices.PresentFamily) {
+        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        createInfo.queueFamilyIndexCount = 2;
+        createInfo.pQueueFamilyIndices = queueFamilyIndices;
+    } else {
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.queueFamilyIndexCount = 0; // Optional
+        createInfo.pQueueFamilyIndices = nullptr; // Optional
+    }
+    
+    createInfo.preTransform = SwapChainSupport.Capabilities.currentTransform;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    
+    createInfo.presentMode = presentMode;
+    createInfo.clipped = VK_TRUE;
+
+    VKFollowLog("vkCreateSwapchainKHR");
+    check(vkCreateSwapchainKHR(LogicDevice, &createInfo, nullptr, &SwapChain) == VK_SUCCESS);
+
+    // retrieve the swap chain image list
+    VKFollowLog("RetrievingTheSwapChainImageList");
+    uint32 RetrieveImageCount = 0;
+    vkGetSwapchainImagesKHR(LogicDevice, SwapChain, &RetrieveImageCount, nullptr);
+    SwapChainImages.resize(RetrieveImageCount);
+    vkGetSwapchainImagesKHR(LogicDevice, SwapChain, &RetrieveImageCount, SwapChainImages.data());
+    DebugLog("retrieve image num[%u]", RetrieveImageCount);
+
+}
+
 FSwapChainSupportDetails HelloTriangleApplication::QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice)
 {
     FSwapChainSupportDetails Details;
@@ -117,13 +175,13 @@ FSwapChainSupportDetails HelloTriangleApplication::QuerySwapChainSupport(VkPhysi
     VKFollowLog("vkGetPhysicalDeviceSurfaceCapabilitiesKHR for get surface formats");
     uint32_t formatCount;
     vkGetPhysicalDeviceSurfaceFormatsKHR(InPhysicalDevice, Surface, &formatCount, nullptr);
-    check(formatCount == 0);
+    check(formatCount != 0);
     Details.Formats.resize(formatCount);
     vkGetPhysicalDeviceSurfaceFormatsKHR(InPhysicalDevice, Surface, &formatCount, Details.Formats.data());
     
     uint32_t presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(InPhysicalDevice, Surface, &presentModeCount, nullptr);
-    check(presentModeCount == 0);
+    check(presentModeCount != 0);
     Details.PresentModes.resize(presentModeCount);
     vkGetPhysicalDeviceSurfacePresentModesKHR(InPhysicalDevice, Surface, &presentModeCount, Details.PresentModes.data());
     
@@ -132,7 +190,52 @@ FSwapChainSupportDetails HelloTriangleApplication::QuerySwapChainSupport(VkPhysi
 
 VkSurfaceFormatKHR HelloTriangleApplication::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats)
 {
-    
+    VKFollowLog("Choose swap surface format");
+    for (const auto& AvailableFormat : InAvailableFormats)
+    {
+        if (AvailableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && AvailableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            return AvailableFormat;
+        }
+    }
+
+    return InAvailableFormats[0];
+}
+
+VkPresentModeKHR HelloTriangleApplication::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& InAvailablePresentModes)
+{
+    for (const auto& PresentMode : InAvailablePresentModes)
+    {
+        if (PresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+        {
+            return VK_PRESENT_MODE_MAILBOX_KHR;
+        }
+    }
+    return VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D HelloTriangleApplication::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& InCapabilities)
+{
+    if (InCapabilities.currentExtent.width != (std::numeric_limits<uint32>::max)())
+    {
+        return InCapabilities.currentExtent;
+    }
+    else
+    {
+        int width, height;
+        glfwGetFramebufferSize(Window, &width, &height);
+
+        VkExtent2D actualExtent =
+        {
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height)
+        };
+
+        actualExtent.width = FMath::Clamp(actualExtent.width, InCapabilities.minImageExtent.width, InCapabilities.maxImageExtent.width);
+        actualExtent.height = FMath::Clamp(actualExtent.height, InCapabilities.minImageExtent.height, InCapabilities.maxImageExtent.height);
+
+        return actualExtent;
+    }
 }
 
 void HelloTriangleApplication::PickPhysicalDevice()
@@ -208,7 +311,7 @@ bool HelloTriangleApplication::CheckDeviceExtensionSupport(VkPhysicalDevice InDe
     {
         requiredExtensions.erase(extension.extensionName);
     }
-
+    check(requiredExtensions.empty());
     return requiredExtensions.empty();
 }
 
@@ -222,6 +325,9 @@ void HelloTriangleApplication::MainLoop()
 
 void HelloTriangleApplication::Cleanup()
 {
+    VKFollowLog("vkDestroySwapchainKHR");
+    vkDestroySwapchainKHR(LogicDevice, SwapChain, nullptr);
+
     DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
     
     VKFollowLog("vkDestroySurfaceKHR");
@@ -233,6 +339,7 @@ void HelloTriangleApplication::Cleanup()
 
     VKFollowLog("glfwDestroyWindow");
     glfwDestroyWindow(Window);
+
 
     glfwTerminate();
 }

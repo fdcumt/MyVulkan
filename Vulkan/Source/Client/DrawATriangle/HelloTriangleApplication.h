@@ -46,7 +46,7 @@ struct FSwapChainSupportDetails
 
     bool IsValid() const
     {
-        return !Formats.empty() && PresentModes.empty();
+        return !Formats.empty() && !PresentModes.empty();
     }
 };
 
@@ -85,14 +85,23 @@ private:
     VkQueue GraphicsQueue;
     VkQueue PresentQueue;
 
+    VkSwapchainKHR SwapChain;
+    std::vector<VkImage> SwapChainImages;
+    VkFormat SwapChainImageFormat;
+    VkExtent2D SwapChainExtent;
+
 private:
     void InitWindow();
     void InitVulkan();
     void CreateSurface();
     void CreateLogicalDevice();
+    void CreateSwapChain();
 
+    // for swap chain
     FSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice);
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats);
+    VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& InAvailablePresentModes);
+    VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& InCapabilities);
 
     
     void PickPhysicalDevice();

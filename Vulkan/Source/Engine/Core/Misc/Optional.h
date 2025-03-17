@@ -77,6 +77,18 @@ public:
 		return *this;
 	}
 
+	bool operator == (const TOptional& Other) const
+	{
+		check(IsSet() && Other.IsSet())
+		return GetValue() == Other.GetValue();
+	}
+
+	bool operator != (const TOptional& Other) const
+	{
+		check(IsSet() && Other.IsSet())
+		return GetValue() != Other.GetValue();
+	}
+
 	ElementType& operator*() 
 	{
 		check(IsSet());
@@ -90,6 +102,12 @@ public:
 	}
 
 	ElementType GetValue() 
+	{
+		check(IsSet());
+		return *GetValuePtr();
+	}
+
+	ElementType GetValue() const
 	{
 		check(IsSet());
 		return *GetValuePtr();
