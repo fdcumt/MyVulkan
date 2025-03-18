@@ -89,20 +89,22 @@ private:
     std::vector<VkImage> SwapChainImages;
     VkFormat SwapChainImageFormat;
     VkExtent2D SwapChainExtent;
-
+    std::vector<VkImageView> SwapChainImageViews;
+    
 private:
     void InitWindow();
     void InitVulkan();
     void CreateSurface();
     void CreateLogicalDevice();
     void CreateSwapChain();
+    void CreateImageViews();
 
     // for swap chain
     FSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice);
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats);
     VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& InAvailablePresentModes);
     VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& InCapabilities);
-
+    
     
     void PickPhysicalDevice();
     bool IsPhysicalDeviceSuitable(VkPhysicalDevice InDevice);

@@ -51,6 +51,7 @@ void HelloTriangleApplication::InitVulkan()
     PickPhysicalDevice();
     CreateLogicalDevice();
     CreateSwapChain();
+    CreateImageViews();
 }
 
 void HelloTriangleApplication::CreateSurface()
@@ -162,6 +163,36 @@ void HelloTriangleApplication::CreateSwapChain()
     vkGetSwapchainImagesKHR(LogicDevice, SwapChain, &RetrieveImageCount, SwapChainImages.data());
     DebugLog("retrieve image num[%u]", RetrieveImageCount);
 
+}
+
+void HelloTriangleApplication::CreateImageViews()
+{
+    SwapChainImageViews.resize(SwapChainImages.size());
+
+    for (size_t i = 0; i < SwapChainImageViews.size(); i++)
+    {
+        VkImageViewCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = SwapChainImages[i];
+        
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = SwapChainImageFormat;
+
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+        
+        VKFollowLog("vkCreateImageView for Image[%d]", i);
+        check(vkCreateImageView(LogicDevice, &createInfo, nullptr, &SwapChainImageViews[i]) == VK_SUCCESS);
+    }
+    
 }
 
 FSwapChainSupportDetails HelloTriangleApplication::QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice)
@@ -325,6 +356,12 @@ void HelloTriangleApplication::MainLoop()
 
 void HelloTriangleApplication::Cleanup()
 {
+    VKFollowLog("vkDestroyImageView");
+    for (auto imageView : SwapChainImageViews)
+    {
+        vkDestroyImageView(LogicDevice, imageView, nullptr);
+    }
+    
     VKFollowLog("vkDestroySwapchainKHR");
     vkDestroySwapchainKHR(LogicDevice, SwapChain, nullptr);
 
