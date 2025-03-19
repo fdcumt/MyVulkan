@@ -3,8 +3,11 @@
 #include <iostream>
 #include <set>
 #include <limits>
+
+#include "FileHelper/FileHelper.h"
 #include "Log/Log.h"
 #include "Math/MathUtility.h"
+#include "Misc/Path.h"
 
 
 VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -52,6 +55,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateLogicalDevice();
     CreateSwapChain();
     CreateImageViews();
+    CreateGraphicsPipeline();
 }
 
 void HelloTriangleApplication::CreateSurface()
@@ -162,7 +166,6 @@ void HelloTriangleApplication::CreateSwapChain()
     SwapChainImages.resize(RetrieveImageCount);
     vkGetSwapchainImagesKHR(LogicDevice, SwapChain, &RetrieveImageCount, SwapChainImages.data());
     DebugLog("retrieve image num[%u]", RetrieveImageCount);
-
 }
 
 void HelloTriangleApplication::CreateImageViews()
@@ -192,7 +195,45 @@ void HelloTriangleApplication::CreateImageViews()
         VKFollowLog("vkCreateImageView for Image[%d]", i);
         check(vkCreateImageView(LogicDevice, &createInfo, nullptr, &SwapChainImageViews[i]) == VK_SUCCESS);
     }
+}
+
+void HelloTriangleApplication::CreateGraphicsPipeline()
+{
+    std::vector<char> VertexShaderData = FFileHelper::ReadFile(FPath::GetShaderSpvDir()+"VertexShader.spv");
+    std::vector<char> FragmentShaderData = FFileHelper::ReadFile(FPath::GetShaderSpvDir()+"FragmentShader.spv");
+
+    VKFollowLog("CreateShaderModule for Vertex shader");
+    VkShaderModule VertexShaderModule = CreateShaderModule(VertexShaderData);
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo.module = VertexShaderModule;
+    vertShaderStageInfo.pName = "main";
+
     
+    VKFollowLog("CreateShaderModule for Fragment shader");
+    VkShaderModule FragmentShaderModule = CreateShaderModule(FragmentShaderData);
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragShaderStageInfo.module = FragmentShaderModule;
+    fragShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+    vkDestroyShaderModule(LogicDevice, VertexShaderModule, nullptr);
+    vkDestroyShaderModule(LogicDevice, FragmentShaderModule, nullptr);
+}
+
+VkShaderModule HelloTriangleApplication::CreateShaderModule(const std::vector<char>& Code)
+{
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = Code.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(Code.data());
+    VkShaderModule shaderModule;
+    check(vkCreateShaderModule(LogicDevice, &createInfo, nullptr, &shaderModule) == VK_SUCCESS);
+    return shaderModule;
 }
 
 FSwapChainSupportDetails HelloTriangleApplication::QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice)

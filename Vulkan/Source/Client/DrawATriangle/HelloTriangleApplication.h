@@ -98,7 +98,9 @@ private:
     void CreateLogicalDevice();
     void CreateSwapChain();
     void CreateImageViews();
-
+    void CreateGraphicsPipeline();
+    VkShaderModule CreateShaderModule(const std::vector<char>& code);
+    
     // for swap chain
     FSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice InPhysicalDevice);
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats);
