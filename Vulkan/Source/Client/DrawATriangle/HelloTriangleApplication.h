@@ -90,6 +90,11 @@ private:
     VkFormat SwapChainImageFormat;
     VkExtent2D SwapChainExtent;
     std::vector<VkImageView> SwapChainImageViews;
+
+    VkRenderPass RenderPass;
+    VkPipelineLayout PipelineLayout;
+
+    VkPipeline GraphicsPipeline;
     
 private:
     void InitWindow();
@@ -98,6 +103,7 @@ private:
     void CreateLogicalDevice();
     void CreateSwapChain();
     void CreateImageViews();
+    void CreateRenderPass();
     void CreateGraphicsPipeline();
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     
