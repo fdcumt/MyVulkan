@@ -57,6 +57,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateImageViews();
     CreateRenderPass();
     CreateGraphicsPipeline();
+    CreateFrameBuffer();
 }
 
 void HelloTriangleApplication::CreateSurface()
@@ -356,11 +357,36 @@ void HelloTriangleApplication::CreateGraphicsPipeline()
     pipelineInfo.basePipelineIndex = -1; // Optional
     
     check(vkCreateGraphicsPipelines(LogicDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &GraphicsPipeline) == VK_SUCCESS);
-
     
     vkDestroyShaderModule(LogicDevice, VertexShaderModule, nullptr);
     vkDestroyShaderModule(LogicDevice, FragmentShaderModule, nullptr);
     VKFollowLog("CreateGraphicsPipeline end");
+}
+
+void HelloTriangleApplication::CreateFrameBuffer()
+{
+    SwapChainFramebuffers.resize(SwapChainImageViews.size());
+
+    // 
+    for (size_t i = 0; i < SwapChainImageViews.size(); i++)
+    {
+        VkImageView attachments[] =
+        {
+            SwapChainImageViews[i]
+        };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = RenderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = SwapChainExtent.width;
+        framebufferInfo.height = SwapChainExtent.height;
+        framebufferInfo.layers = 1;
+        
+        VKFollowLog("vkCreateFramebuffer for image %d", i);
+        check(vkCreateFramebuffer(LogicDevice, &framebufferInfo, nullptr, &SwapChainFramebuffers[i]) == VK_SUCCESS);
+    }
 }
 
 VkShaderModule HelloTriangleApplication::CreateShaderModule(const std::vector<char>& Code)
@@ -535,6 +561,12 @@ void HelloTriangleApplication::MainLoop()
 
 void HelloTriangleApplication::Cleanup()
 {
+    for (auto framebuffer : SwapChainFramebuffers)
+    {
+        vkDestroyFramebuffer(LogicDevice, framebuffer, nullptr);
+    }
+    SwapChainFramebuffers.clear();
+
     VKFollowLog("vkDestroyPipeline");
     vkDestroyPipeline(LogicDevice, GraphicsPipeline, nullptr);
     

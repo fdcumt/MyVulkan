@@ -91,6 +91,8 @@ private:
     VkExtent2D SwapChainExtent;
     std::vector<VkImageView> SwapChainImageViews;
 
+    std::vector<VkFramebuffer> SwapChainFramebuffers;
+    
     VkRenderPass RenderPass;
     VkPipelineLayout PipelineLayout;
 
@@ -105,6 +107,8 @@ private:
     void CreateImageViews();
     void CreateRenderPass();
     void CreateGraphicsPipeline();
+    void CreateFrameBuffer();
+    
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     
     // for swap chain
