@@ -97,6 +97,8 @@ private:
     VkPipelineLayout PipelineLayout;
 
     VkPipeline GraphicsPipeline;
+
+    VkCommandPool CommandPool;
     
 private:
     void InitWindow();
@@ -108,6 +110,7 @@ private:
     void CreateRenderPass();
     void CreateGraphicsPipeline();
     void CreateFrameBuffer();
+    void CreateCommandBuffer();
     
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     

@@ -58,6 +58,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateRenderPass();
     CreateGraphicsPipeline();
     CreateFrameBuffer();
+    CreateCommandBuffer();
 }
 
 void HelloTriangleApplication::CreateSurface()
@@ -387,6 +388,17 @@ void HelloTriangleApplication::CreateFrameBuffer()
         VKFollowLog("vkCreateFramebuffer for image %d", i);
         check(vkCreateFramebuffer(LogicDevice, &framebufferInfo, nullptr, &SwapChainFramebuffers[i]) == VK_SUCCESS);
     }
+}
+
+void HelloTriangleApplication::CreateCommandBuffer()
+{
+    FQueueFamilyIndices queueFamilyIndices = FindQueueFamily(PhysicalDevice);
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.GraphicsFamily.ValueRef();
+    
 }
 
 VkShaderModule HelloTriangleApplication::CreateShaderModule(const std::vector<char>& Code)
