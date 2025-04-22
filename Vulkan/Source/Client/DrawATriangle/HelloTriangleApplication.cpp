@@ -58,6 +58,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateRenderPass();
     CreateGraphicsPipeline();
     CreateFrameBuffer();
+    CreateCommandPool();
     CreateCommandBuffer();
 }
 
@@ -390,7 +391,7 @@ void HelloTriangleApplication::CreateFrameBuffer()
     }
 }
 
-void HelloTriangleApplication::CreateCommandBuffer()
+void HelloTriangleApplication::CreateCommandPool()
 {
     FQueueFamilyIndices queueFamilyIndices = FindQueueFamily(PhysicalDevice);
 
@@ -399,6 +400,19 @@ void HelloTriangleApplication::CreateCommandBuffer()
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.GraphicsFamily.ValueRef();
     
+    VKFollowLog("vkCreateCommandPool");
+    check(vkCreateCommandPool(LogicDevice, &poolInfo, nullptr, &CommandPool) == VK_SUCCESS);
+}
+
+void HelloTriangleApplication::CreateCommandBuffer()
+{
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = CommandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    check(vkAllocateCommandBuffers(LogicDevice, &allocInfo, &CommandBuffer) == VK_SUCCESS);
 }
 
 VkShaderModule HelloTriangleApplication::CreateShaderModule(const std::vector<char>& Code)
@@ -460,6 +474,59 @@ VkPresentModeKHR HelloTriangleApplication::ChooseSwapPresentMode(const std::vect
         }
     }
     return VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
+}
+
+void HelloTriangleApplication::RecordCommandBuffer(VkCommandBuffer InCommandBuffer, uint32 InImageIndex)
+{
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = 0; // Optional
+    beginInfo.pInheritanceInfo = nullptr; // Optional
+
+    VKFollowLog("vkBeginCommandBuffer");
+    check(vkBeginCommandBuffer(InCommandBuffer, &beginInfo) == VK_SUCCESS);
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = RenderPass;
+    renderPassInfo.framebuffer = SwapChainFramebuffers[InImageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = SwapChainExtent;
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    VKFollowLog("vkCmdBeginRenderPass");
+    vkCmdBeginRenderPass(InCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    {
+        VKFollowLog("vkCmdBindPipeline");
+        vkCmdBindPipeline(InCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, GraphicsPipeline);
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(SwapChainExtent.width);
+        viewport.height = static_cast<float>(SwapChainExtent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+
+        VKFollowLog("vkCmdSetViewport");
+        vkCmdSetViewport(InCommandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = SwapChainExtent;
+        VKFollowLog("vkCmdSetScissor");
+        vkCmdSetScissor(InCommandBuffer, 0, 1, &scissor);
+
+        VKFollowLog("vkCmdDraw");
+        vkCmdDraw(InCommandBuffer, 3, 1, 0, 0);
+    }
+    VKFollowLog("vkCmdEndRenderPass");
+    vkCmdEndRenderPass(InCommandBuffer);
+
+    VKFollowLog("vkEndCommandBuffer");
+    check(vkEndCommandBuffer(InCommandBuffer) == VK_SUCCESS);
 }
 
 VkExtent2D HelloTriangleApplication::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& InCapabilities)
@@ -573,6 +640,8 @@ void HelloTriangleApplication::MainLoop()
 
 void HelloTriangleApplication::Cleanup()
 {
+    vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
+    
     for (auto framebuffer : SwapChainFramebuffers)
     {
         vkDestroyFramebuffer(LogicDevice, framebuffer, nullptr);

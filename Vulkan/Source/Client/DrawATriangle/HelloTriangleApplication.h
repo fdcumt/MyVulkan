@@ -97,7 +97,8 @@ private:
     VkPipelineLayout PipelineLayout;
 
     VkPipeline GraphicsPipeline;
-
+    
+    VkCommandBuffer CommandBuffer;
     VkCommandPool CommandPool;
     
 private:
@@ -110,7 +111,7 @@ private:
     void CreateRenderPass();
     void CreateGraphicsPipeline();
     void CreateFrameBuffer();
-    void CreateCommandBuffer();
+
     
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     
@@ -119,7 +120,13 @@ private:
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats);
     VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& InAvailablePresentModes);
     VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& InCapabilities);
-    
+
+    // for command buffer
+    void CreateCommandPool();
+    void CreateCommandBuffer();
+    void RecordCommandBuffer(VkCommandBuffer InCommandBuffer, uint32 InImageIndex);
+
+
     
     void PickPhysicalDevice();
     bool IsPhysicalDeviceSuitable(VkPhysicalDevice InDevice);
@@ -148,3 +155,5 @@ private:
                                        const VkAllocationCallbacks* pAllocator);
     
 };
+
+
