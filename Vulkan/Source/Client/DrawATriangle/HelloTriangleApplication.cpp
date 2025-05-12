@@ -60,6 +60,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateFrameBuffer();
     CreateCommandPool();
     CreateCommandBuffer();
+    CreateSyncObjects();
 }
 
 void HelloTriangleApplication::CreateSurface()
@@ -206,30 +207,31 @@ void HelloTriangleApplication::CreateRenderPass()
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = SwapChainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    
     colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // 用于指定在RenderPass开始之前, 图片的Layout
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // 在RenderPass之后, 图片格式转变成哪种layout
-
     
     VkAttachmentReference colorAttachmentRef{};
     colorAttachmentRef.attachment = 0;
     // 当subpass开始时, 会自动将Attachment格式转换成该layout
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
     
     VkSubpassDescription subpass{};
-    
     // 未来可能还会支持compute类型的pipeline, 所以, 这里必须指定为图形类型.
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; 
-
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -237,9 +239,10 @@ void HelloTriangleApplication::CreateRenderPass()
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
 
     check(vkCreateRenderPass(LogicDevice, &renderPassInfo, nullptr, &RenderPass) == VK_SUCCESS)
-    
 }
 
 void HelloTriangleApplication::CreateGraphicsPipeline()
@@ -391,6 +394,68 @@ void HelloTriangleApplication::CreateFrameBuffer()
     }
 }
 
+void HelloTriangleApplication::CreateSyncObjects()
+{
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    check(vkCreateSemaphore(LogicDevice, &semaphoreInfo, nullptr, &ImageAvailableSemaphore) == VK_SUCCESS);
+    check(vkCreateSemaphore(LogicDevice, &semaphoreInfo, nullptr, &RenderFinishedSemaphore) == VK_SUCCESS);
+    check(vkCreateFence(LogicDevice, &fenceInfo, nullptr, &InFlightFence) == VK_SUCCESS);
+}
+
+void HelloTriangleApplication::DrawFrame()
+{
+    vkWaitForFences(LogicDevice, 1, &InFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(LogicDevice, 1, &InFlightFence);
+
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(LogicDevice, SwapChain, UINT64_MAX, ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+    vkResetCommandBuffer(CommandBuffer, 0);
+
+    RecordCommandBuffer(CommandBuffer, imageIndex);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    // 在GPU端, 等待ImageAvailableSemaphore signaled, 即已经从SwapChain中请求到一张img, 然后执行Commandbuffer.
+    VkSemaphore waitSemaphores[] = {ImageAvailableSemaphore};
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &CommandBuffer;
+
+    // 等待CommandBuffer执行完毕, 触发RenderFinishedSemaphore
+    VkSemaphore signalSemaphores[] = {RenderFinishedSemaphore};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    check(vkQueueSubmit(GraphicsQueue, 1, &submitInfo, InFlightFence) == VK_SUCCESS);
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+    
+    VkSwapchainKHR swapChains[] = {SwapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+
+    presentInfo.pResults = nullptr; // Optional
+
+    check(vkQueuePresentKHR(PresentQueue, &presentInfo) == VK_SUCCESS);
+}
+
 void HelloTriangleApplication::CreateCommandPool()
 {
     FQueueFamilyIndices queueFamilyIndices = FindQueueFamily(PhysicalDevice);
@@ -483,7 +548,7 @@ void HelloTriangleApplication::RecordCommandBuffer(VkCommandBuffer InCommandBuff
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
-    VKFollowLog("vkBeginCommandBuffer");
+    //VKFollowLog("vkBeginCommandBuffer");
     check(vkBeginCommandBuffer(InCommandBuffer, &beginInfo) == VK_SUCCESS);
 
     VkRenderPassBeginInfo renderPassInfo{};
@@ -497,10 +562,10 @@ void HelloTriangleApplication::RecordCommandBuffer(VkCommandBuffer InCommandBuff
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
 
-    VKFollowLog("vkCmdBeginRenderPass");
+    //VKFollowLog("vkCmdBeginRenderPass");
     vkCmdBeginRenderPass(InCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     {
-        VKFollowLog("vkCmdBindPipeline");
+        //VKFollowLog("vkCmdBindPipeline");
         vkCmdBindPipeline(InCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, GraphicsPipeline);
         VkViewport viewport{};
         viewport.x = 0.0f;
@@ -510,22 +575,22 @@ void HelloTriangleApplication::RecordCommandBuffer(VkCommandBuffer InCommandBuff
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
-        VKFollowLog("vkCmdSetViewport");
+        //VKFollowLog("vkCmdSetViewport");
         vkCmdSetViewport(InCommandBuffer, 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = {0, 0};
         scissor.extent = SwapChainExtent;
-        VKFollowLog("vkCmdSetScissor");
+        //VKFollowLog("vkCmdSetScissor");
         vkCmdSetScissor(InCommandBuffer, 0, 1, &scissor);
 
-        VKFollowLog("vkCmdDraw");
+        //VKFollowLog("vkCmdDraw");
         vkCmdDraw(InCommandBuffer, 3, 1, 0, 0);
     }
-    VKFollowLog("vkCmdEndRenderPass");
+    //VKFollowLog("vkCmdEndRenderPass");
     vkCmdEndRenderPass(InCommandBuffer);
 
-    VKFollowLog("vkEndCommandBuffer");
+    //VKFollowLog("vkEndCommandBuffer");
     check(vkEndCommandBuffer(InCommandBuffer) == VK_SUCCESS);
 }
 
@@ -635,11 +700,19 @@ void HelloTriangleApplication::MainLoop()
     while (!glfwWindowShouldClose(Window))
     {
         glfwPollEvents();
+        DrawFrame();
     }
+
+    // 等待Device空闲了, 才能释放各种资源, 例如Semaphores
+    vkDeviceWaitIdle(LogicDevice);
 }
 
 void HelloTriangleApplication::Cleanup()
 {
+    vkDestroySemaphore(LogicDevice, ImageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(LogicDevice, RenderFinishedSemaphore, nullptr);
+    vkDestroyFence(LogicDevice, InFlightFence, nullptr);
+    
     vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
     
     for (auto framebuffer : SwapChainFramebuffers)

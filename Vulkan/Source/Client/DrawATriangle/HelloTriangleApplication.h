@@ -100,6 +100,10 @@ private:
     
     VkCommandBuffer CommandBuffer;
     VkCommandPool CommandPool;
+
+    VkSemaphore ImageAvailableSemaphore;
+    VkSemaphore RenderFinishedSemaphore;
+    VkFence InFlightFence;
     
 private:
     void InitWindow();
@@ -111,7 +115,10 @@ private:
     void CreateRenderPass();
     void CreateGraphicsPipeline();
     void CreateFrameBuffer();
+    void CreateSyncObjects();
 
+
+    void DrawFrame();
     
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     
