@@ -59,7 +59,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateGraphicsPipeline();
     CreateFrameBuffer();
     CreateCommandPool();
-    CreateCommandBuffer();
+    CreateCommandBuffers();
     CreateSyncObjects();
 }
 
@@ -396,6 +396,10 @@ void HelloTriangleApplication::CreateFrameBuffer()
 
 void HelloTriangleApplication::CreateSyncObjects()
 {
+    ImageAvailableSemaphores.resize(MaxFrameInFlight);
+    RenderFinishedSemaphores.resize(MaxFrameInFlight);
+    InFlightFences.resize(MaxFrameInFlight);
+    
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -403,42 +407,46 @@ void HelloTriangleApplication::CreateSyncObjects()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    check(vkCreateSemaphore(LogicDevice, &semaphoreInfo, nullptr, &ImageAvailableSemaphore) == VK_SUCCESS);
-    check(vkCreateSemaphore(LogicDevice, &semaphoreInfo, nullptr, &RenderFinishedSemaphore) == VK_SUCCESS);
-    check(vkCreateFence(LogicDevice, &fenceInfo, nullptr, &InFlightFence) == VK_SUCCESS);
+    for (size_t i = 0; i < MaxFrameInFlight; i++)
+    {
+        check(vkCreateSemaphore(LogicDevice, &semaphoreInfo, nullptr, &ImageAvailableSemaphores[i]) == VK_SUCCESS);
+        check(vkCreateSemaphore(LogicDevice, &semaphoreInfo, nullptr, &RenderFinishedSemaphores[i]) == VK_SUCCESS);
+        check(vkCreateFence(LogicDevice, &fenceInfo, nullptr, &InFlightFences[i]) == VK_SUCCESS);
+    }
 }
 
 void HelloTriangleApplication::DrawFrame()
 {
-    vkWaitForFences(LogicDevice, 1, &InFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(LogicDevice, 1, &InFlightFence);
+    vkWaitForFences(LogicDevice, 1, &InFlightFences[CurrentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences(LogicDevice, 1, &InFlightFences[CurrentFrame]);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(LogicDevice, SwapChain, UINT64_MAX, ImageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    // 这里将timeout设置为UINT64_MAX, 表明需要一直等, 直到成功获取Image为止.
+    vkAcquireNextImageKHR(LogicDevice, SwapChain, UINT64_MAX, ImageAvailableSemaphores[CurrentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    vkResetCommandBuffer(CommandBuffer, 0);
+    vkResetCommandBuffer(CommandBuffers[CurrentFrame], 0);
 
-    RecordCommandBuffer(CommandBuffer, imageIndex);
+    RecordCommandBuffer(CommandBuffers[CurrentFrame], imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     // 在GPU端, 等待ImageAvailableSemaphore signaled, 即已经从SwapChain中请求到一张img, 然后执行Commandbuffer.
-    VkSemaphore waitSemaphores[] = {ImageAvailableSemaphore};
+    VkSemaphore waitSemaphores[] = {ImageAvailableSemaphores[CurrentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &CommandBuffer;
+    submitInfo.pCommandBuffers = &CommandBuffers[CurrentFrame];
 
     // 等待CommandBuffer执行完毕, 触发RenderFinishedSemaphore
-    VkSemaphore signalSemaphores[] = {RenderFinishedSemaphore};
+    VkSemaphore signalSemaphores[] = {RenderFinishedSemaphores[CurrentFrame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    check(vkQueueSubmit(GraphicsQueue, 1, &submitInfo, InFlightFence) == VK_SUCCESS);
+    check(vkQueueSubmit(GraphicsQueue, 1, &submitInfo, InFlightFences[CurrentFrame]) == VK_SUCCESS);
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -454,6 +462,8 @@ void HelloTriangleApplication::DrawFrame()
     presentInfo.pResults = nullptr; // Optional
 
     check(vkQueuePresentKHR(PresentQueue, &presentInfo) == VK_SUCCESS);
+
+    CurrentFrame = (CurrentFrame + 1) % MaxFrameInFlight;
 }
 
 void HelloTriangleApplication::CreateCommandPool()
@@ -469,15 +479,16 @@ void HelloTriangleApplication::CreateCommandPool()
     check(vkCreateCommandPool(LogicDevice, &poolInfo, nullptr, &CommandPool) == VK_SUCCESS);
 }
 
-void HelloTriangleApplication::CreateCommandBuffer()
+void HelloTriangleApplication::CreateCommandBuffers()
 {
+    CommandBuffers.resize(MaxFrameInFlight);
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = CommandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = (uint32)CommandBuffers.size();
 
-    check(vkAllocateCommandBuffers(LogicDevice, &allocInfo, &CommandBuffer) == VK_SUCCESS);
+    check(vkAllocateCommandBuffers(LogicDevice, &allocInfo, CommandBuffers.data()) == VK_SUCCESS);
 }
 
 VkShaderModule HelloTriangleApplication::CreateShaderModule(const std::vector<char>& Code)
@@ -709,10 +720,14 @@ void HelloTriangleApplication::MainLoop()
 
 void HelloTriangleApplication::Cleanup()
 {
-    vkDestroySemaphore(LogicDevice, ImageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(LogicDevice, RenderFinishedSemaphore, nullptr);
-    vkDestroyFence(LogicDevice, InFlightFence, nullptr);
-    
+    for (size_t i = 0; i < MaxFrameInFlight; i++)
+    {
+        vkDestroySemaphore(LogicDevice, ImageAvailableSemaphores[i], nullptr);
+        vkDestroySemaphore(LogicDevice, RenderFinishedSemaphores[i], nullptr);
+        vkDestroyFence(LogicDevice, InFlightFences[i], nullptr);
+    }
+
+    // CommandPool销毁时会自动销毁其内部的Commandbuffer, 所以不用再处理CommandBuffer.
     vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
     
     for (auto framebuffer : SwapChainFramebuffers)

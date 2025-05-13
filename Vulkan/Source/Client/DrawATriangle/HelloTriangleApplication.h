@@ -59,6 +59,10 @@ private:
     GLFWwindow* Window = nullptr;
     VkInstance Instance;
 
+    static constexpr int32 MaxFrameInFlight = 2;
+
+    uint32_t CurrentFrame = 0;
+
     std::vector<VkLayerProperties> AvailableLayers;
     std::vector<char*> UsedValidationLayersForVulkanInstance =
     {
@@ -98,12 +102,12 @@ private:
 
     VkPipeline GraphicsPipeline;
     
-    VkCommandBuffer CommandBuffer;
+    std::vector<VkCommandBuffer> CommandBuffers;
     VkCommandPool CommandPool;
 
-    VkSemaphore ImageAvailableSemaphore;
-    VkSemaphore RenderFinishedSemaphore;
-    VkFence InFlightFence;
+    std::vector<VkSemaphore> ImageAvailableSemaphores;
+    std::vector<VkSemaphore> RenderFinishedSemaphores;
+    std::vector<VkFence> InFlightFences;
     
 private:
     void InitWindow();
@@ -130,7 +134,7 @@ private:
 
     // for command buffer
     void CreateCommandPool();
-    void CreateCommandBuffer();
+    void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer InCommandBuffer, uint32 InImageIndex);
 
 
