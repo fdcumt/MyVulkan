@@ -44,6 +44,8 @@ void HelloTriangleApplication::InitWindow()
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     Window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+    glfwSetWindowUserPointer(Window, this);
+    glfwSetFramebufferSizeCallback(Window, FramebufferResizeCallback);
 }
 
 void HelloTriangleApplication::InitVulkan()
@@ -57,7 +59,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateImageViews();
     CreateRenderPass();
     CreateGraphicsPipeline();
-    CreateFrameBuffer();
+    CreateFrameBuffers();
     CreateCommandPool();
     CreateCommandBuffers();
     CreateSyncObjects();
@@ -368,7 +370,7 @@ void HelloTriangleApplication::CreateGraphicsPipeline()
     VKFollowLog("CreateGraphicsPipeline end");
 }
 
-void HelloTriangleApplication::CreateFrameBuffer()
+void HelloTriangleApplication::CreateFrameBuffers()
 {
     SwapChainFramebuffers.resize(SwapChainImageViews.size());
 
@@ -415,15 +417,67 @@ void HelloTriangleApplication::CreateSyncObjects()
     }
 }
 
+void HelloTriangleApplication::CleanupSwapChain()
+{
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(Window, &width, &height);
+    while (width == 0 || height == 0)
+    {
+        glfwGetFramebufferSize(Window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(LogicDevice);
+    
+    for (auto framebuffer : SwapChainFramebuffers)
+    {
+        vkDestroyFramebuffer(LogicDevice, framebuffer, nullptr);
+    }
+    SwapChainFramebuffers.clear();
+
+    VKFollowLog("vkDestroyImageView");
+    for (auto imageView : SwapChainImageViews)
+    {
+        vkDestroyImageView(LogicDevice, imageView, nullptr);
+    }
+    SwapChainImageViews.clear();
+
+    VKFollowLog("vkDestroySwapchainKHR");
+    vkDestroySwapchainKHR(LogicDevice, SwapChain, nullptr);
+}
+
+void HelloTriangleApplication::RecreateSwapChain()
+{
+    vkDeviceWaitIdle(LogicDevice);
+    
+    CleanupSwapChain();
+    
+    CreateSwapChain();
+    CreateImageViews();
+    CreateFrameBuffers();
+}
+
 void HelloTriangleApplication::DrawFrame()
 {
     vkWaitForFences(LogicDevice, 1, &InFlightFences[CurrentFrame], VK_TRUE, UINT64_MAX);
-    vkResetFences(LogicDevice, 1, &InFlightFences[CurrentFrame]);
-
+    
     uint32_t imageIndex;
     // 这里将timeout设置为UINT64_MAX, 表明需要一直等, 直到成功获取Image为止.
-    vkAcquireNextImageKHR(LogicDevice, SwapChain, UINT64_MAX, ImageAvailableSemaphores[CurrentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(LogicDevice, SwapChain, UINT64_MAX, ImageAvailableSemaphores[CurrentFrame], VK_NULL_HANDLE, &imageIndex);
 
+    if (result==VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        bFramebufferResized = false;
+        RecreateSwapChain();
+        return ;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    vkResetFences(LogicDevice, 1, &InFlightFences[CurrentFrame]);
+    
     vkResetCommandBuffer(CommandBuffers[CurrentFrame], 0);
 
     RecordCommandBuffer(CommandBuffers[CurrentFrame], imageIndex);
@@ -461,8 +515,18 @@ void HelloTriangleApplication::DrawFrame()
 
     presentInfo.pResults = nullptr; // Optional
 
-    check(vkQueuePresentKHR(PresentQueue, &presentInfo) == VK_SUCCESS);
-
+    result = vkQueuePresentKHR(PresentQueue, &presentInfo);
+    if (result==VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        bFramebufferResized = false;
+        RecreateSwapChain();
+        return ;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+    
     CurrentFrame = (CurrentFrame + 1) % MaxFrameInFlight;
 }
 
@@ -720,6 +784,7 @@ void HelloTriangleApplication::MainLoop()
 
 void HelloTriangleApplication::Cleanup()
 {
+    CleanupSwapChain();
     for (size_t i = 0; i < MaxFrameInFlight; i++)
     {
         vkDestroySemaphore(LogicDevice, ImageAvailableSemaphores[i], nullptr);
@@ -730,12 +795,6 @@ void HelloTriangleApplication::Cleanup()
     // CommandPool销毁时会自动销毁其内部的Commandbuffer, 所以不用再处理CommandBuffer.
     vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
     
-    for (auto framebuffer : SwapChainFramebuffers)
-    {
-        vkDestroyFramebuffer(LogicDevice, framebuffer, nullptr);
-    }
-    SwapChainFramebuffers.clear();
-
     VKFollowLog("vkDestroyPipeline");
     vkDestroyPipeline(LogicDevice, GraphicsPipeline, nullptr);
     
@@ -745,15 +804,6 @@ void HelloTriangleApplication::Cleanup()
     VKFollowLog("vkDestroyRenderPass");
     vkDestroyRenderPass(LogicDevice, RenderPass, nullptr);
     
-    VKFollowLog("vkDestroyImageView");
-    for (auto imageView : SwapChainImageViews)
-    {
-        vkDestroyImageView(LogicDevice, imageView, nullptr);
-    }
-    
-    VKFollowLog("vkDestroySwapchainKHR");
-    vkDestroySwapchainKHR(LogicDevice, SwapChain, nullptr);
-
     DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
     
     VKFollowLog("vkDestroySurfaceKHR");
@@ -993,6 +1043,12 @@ void HelloTriangleApplication::DestroyDebugUtilsMessengerEXT(VkInstance instance
     {
         func(instance, debugMessenger, pAllocator);
     }
+}
+
+void HelloTriangleApplication::FramebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
+    auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+    app->bFramebufferResized = true;
 }
 
 std::vector<const char*> HelloTriangleApplication::GetRequiredExtensions()

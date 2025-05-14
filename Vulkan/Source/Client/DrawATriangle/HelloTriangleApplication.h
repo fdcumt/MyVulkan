@@ -62,6 +62,7 @@ private:
     static constexpr int32 MaxFrameInFlight = 2;
 
     uint32_t CurrentFrame = 0;
+    bool bFramebufferResized = false;
 
     std::vector<VkLayerProperties> AvailableLayers;
     std::vector<char*> UsedValidationLayersForVulkanInstance =
@@ -118,10 +119,12 @@ private:
     void CreateImageViews();
     void CreateRenderPass();
     void CreateGraphicsPipeline();
-    void CreateFrameBuffer();
+    void CreateFrameBuffers();
     void CreateSyncObjects();
 
-
+    void CleanupSwapChain();
+    void RecreateSwapChain();
+    
     void DrawFrame();
     
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
@@ -164,6 +167,8 @@ private:
     void DestroyDebugUtilsMessengerEXT(VkInstance instance,
                                        VkDebugUtilsMessengerEXT debugMessenger,
                                        const VkAllocationCallbacks* pAllocator);
+
+    static void FramebufferResizeCallback(GLFWwindow* window, int width, int height);
     
 };
 
