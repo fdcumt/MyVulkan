@@ -12,6 +12,7 @@ set(LibItems
     "glfw3.lib;vulkan-1.lib"
     "Core"
     "Log"
+    "Glm"
     )
 
 
@@ -22,6 +23,7 @@ set(IncludeDirs
 		"."
 		"Core"
 		"Log"
+		"Glm"
 		"${SlnDir}/Dependency/GLFW/Include/"
 		"${SlnDir}/Dependency/Vulkan/Include/"
 	)
