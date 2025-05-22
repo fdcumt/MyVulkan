@@ -27,6 +27,11 @@ VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     }
 }
 
+HelloTriangleApplication::HelloTriangleApplication()
+{
+
+}
+
 void HelloTriangleApplication::run()
 {
     InitWindow();
@@ -61,6 +66,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreateCommandPool();
+    CreateVertexBuffer();
     CreateCommandBuffers();
     CreateSyncObjects();
 }
@@ -273,10 +279,16 @@ void HelloTriangleApplication::CreateGraphicsPipeline()
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
     VKFollowLog("fill VkPipelineVertexInputStateCreateInfo");
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+    VkVertexInputBindingDescription bindingDescription = Vertex::getBindingDescription();
+    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = Vertex::getAttributeDescriptions();
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     VKFollowLog("VkPipelineInputAssemblyStateCreateInfo for create input assembly");
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -659,14 +671,65 @@ void HelloTriangleApplication::RecordCommandBuffer(VkCommandBuffer InCommandBuff
         //VKFollowLog("vkCmdSetScissor");
         vkCmdSetScissor(InCommandBuffer, 0, 1, &scissor);
 
+        //VKFollowLog("bind vertex buffer");
+        VkBuffer vertexBuffers[] = {VertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(InCommandBuffer, 0, 1, vertexBuffers, offsets);
+        
         //VKFollowLog("vkCmdDraw");
-        vkCmdDraw(InCommandBuffer, 3, 1, 0, 0);
+        vkCmdDraw(InCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
     }
     //VKFollowLog("vkCmdEndRenderPass");
     vkCmdEndRenderPass(InCommandBuffer);
 
     //VKFollowLog("vkEndCommandBuffer");
     check(vkEndCommandBuffer(InCommandBuffer) == VK_SUCCESS);
+}
+
+void HelloTriangleApplication::CreateVertexBuffer()
+{
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VKFollowLog("vkCreateBuffer")
+    check(vkCreateBuffer(LogicDevice, &bufferInfo, nullptr, &VertexBuffer) == VK_SUCCESS);
+    
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(LogicDevice, VertexBuffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    check(vkAllocateMemory(LogicDevice, &allocInfo, nullptr, &VertexBufferMemory) == VK_SUCCESS);
+
+    vkBindBufferMemory(LogicDevice, VertexBuffer, VertexBufferMemory, 0);
+
+    // 将Vertex数据拷贝到VertexBufferMemory中
+    void* data;
+    vkMapMemory(LogicDevice, VertexBufferMemory, 0, bufferInfo.size, 0, &data);
+    memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+    vkUnmapMemory(LogicDevice, VertexBufferMemory);
+}
+
+uint32 HelloTriangleApplication::FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &memProperties);
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+    {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            return i;
+        }
+    }
+
+    return 0;
+    
 }
 
 VkExtent2D HelloTriangleApplication::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& InCapabilities)
@@ -785,6 +848,24 @@ void HelloTriangleApplication::MainLoop()
 void HelloTriangleApplication::Cleanup()
 {
     CleanupSwapChain();
+
+    { // pipeline and render pass
+        VKFollowLog("vkDestroyPipeline");
+        vkDestroyPipeline(LogicDevice, GraphicsPipeline, nullptr);
+        VKFollowLog("vkDestroyPipelineLayout");
+        vkDestroyPipelineLayout(LogicDevice, PipelineLayout, nullptr);
+        VKFollowLog("vkDestroyRenderPass");
+        vkDestroyRenderPass(LogicDevice, RenderPass, nullptr);
+    }
+
+    { // buffer and memory
+        VKFollowLog("vkDestroyBuffer-VertexBuffer");
+        vkDestroyBuffer(LogicDevice, VertexBuffer, nullptr);
+        VKFollowLog("vkFreeMemory-VertexBufferMemory");
+        vkFreeMemory(LogicDevice, VertexBufferMemory, nullptr);
+    }
+
+    // semaphone and fence
     for (size_t i = 0; i < MaxFrameInFlight; i++)
     {
         vkDestroySemaphore(LogicDevice, ImageAvailableSemaphores[i], nullptr);
@@ -792,17 +873,13 @@ void HelloTriangleApplication::Cleanup()
         vkDestroyFence(LogicDevice, InFlightFences[i], nullptr);
     }
 
-    // CommandPool销毁时会自动销毁其内部的Commandbuffer, 所以不用再处理CommandBuffer.
-    vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
-    
-    VKFollowLog("vkDestroyPipeline");
-    vkDestroyPipeline(LogicDevice, GraphicsPipeline, nullptr);
-    
-    VKFollowLog("vkDestroyPipelineLayout");
-    vkDestroyPipelineLayout(LogicDevice, PipelineLayout, nullptr);
 
-    VKFollowLog("vkDestroyRenderPass");
-    vkDestroyRenderPass(LogicDevice, RenderPass, nullptr);
+    // CommandPool销毁时会自动销毁其内部的Commandbuffer, 所以不用再处理CommandBuffer.
+    VKFollowLog("vkDestroyCommandPool");
+    vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
+
+    VKFollowLog("vkDestroyDevice");
+    vkDestroyDevice(LogicDevice, nullptr);
     
     DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
     

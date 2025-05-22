@@ -70,7 +70,7 @@ function(GenLib LibName CurDir IncludeDirs LibDirs OutputDir LibItems PublicDefi
 
 
 	#所有文件保存在一个变量中
-	file(GLOB_RECURSE all_files *.h *.cpp *.c *.cc)
+	file(GLOB_RECURSE all_files *.h *.cpp *.c *.cc *.hpp *.inl)
 	# message("GenLib CurDir:${CurDir}")
 	AddFiltersForVS("${all_files}" "${CurDir}")
 	
@@ -129,7 +129,7 @@ function(GenEXE ExeName CurDir IncludeDirs LibDirs OutputDir)
 	# message("GenLib CurDir:${CurDir} CMAKE_SOURCE_DIR:${CMAKE_SOURCE_DIR} RelativePath:${RelativePath}")
 
 	#所有文件保存在一个变量中		
-	file(GLOB_RECURSE all_files *.h *.cpp *.c *.cc)
+	file(GLOB_RECURSE all_files *.h *.cpp *.c *.cc *.hpp *.inl)
 	AddFiltersForVS("${all_files}" "${CurDir}")
 
 	add_executable("${ExeName}" "${all_files}")

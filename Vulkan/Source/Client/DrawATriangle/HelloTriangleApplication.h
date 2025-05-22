@@ -9,15 +9,53 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <array>
 #include <cstring>
 #include <cstdlib>
 #include <optional>
 #include <set>
 #include "Misc/Optional.h"
+#include "glm/glm.hpp"
 
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+
+struct Vertex {
+    glm::vec2 pos;
+    glm::vec3 color;
+
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(Vertex);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        return bindingDescription;
+    }
+
+    static const std::array<VkVertexInputAttributeDescription, 2>& getAttributeDescriptions() {
+        static std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(Vertex, pos);
+        
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(Vertex, color);
+        return attributeDescriptions;
+    }
+};
+
+const std::vector<Vertex> vertices = {
+    //{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    //{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    //{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+ {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+ {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
 
 struct FQueueFamilyIndices
 {
@@ -52,6 +90,9 @@ struct FSwapChainSupportDetails
 
 class HelloTriangleApplication
 {
+public:
+    HelloTriangleApplication();
+
 public:
     void run();
 
@@ -102,6 +143,9 @@ private:
     VkPipelineLayout PipelineLayout;
 
     VkPipeline GraphicsPipeline;
+
+    VkBuffer VertexBuffer;
+    VkDeviceMemory VertexBufferMemory;
     
     std::vector<VkCommandBuffer> CommandBuffers;
     VkCommandPool CommandPool;
@@ -134,13 +178,14 @@ private:
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& InAvailableFormats);
     VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& InAvailablePresentModes);
     VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& InCapabilities);
-
+    
     // for command buffer
     void CreateCommandPool();
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer InCommandBuffer, uint32 InImageIndex);
 
-
+    void CreateVertexBuffer();
+    uint32 FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties) ;
     
     void PickPhysicalDevice();
     bool IsPhysicalDeviceSuitable(VkPhysicalDevice InDevice);
