@@ -358,24 +358,24 @@ void HelloTriangleApplication::CreateGraphicsPipeline()
     check(vkCreatePipelineLayout(LogicDevice, &pipelineLayoutInfo, nullptr, &PipelineLayout) == VK_SUCCESS);
 
     VKFollowLog("fill VkGraphicsPipelineCreateInfo");
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssembly;
-    pipelineInfo.pViewportState = &viewportState;
-    pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pMultisampleState = &multisampling;
-    pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = PipelineLayout;
-    pipelineInfo.renderPass = RenderPass;
-    pipelineInfo.subpass = 0;
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
-    pipelineInfo.basePipelineIndex = -1; // Optional
+    VkGraphicsPipelineCreateInfo GraphicPipelineCreateInfo{};
+    GraphicPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    GraphicPipelineCreateInfo.stageCount = 2;
+    GraphicPipelineCreateInfo.pStages = shaderStages;
+    GraphicPipelineCreateInfo.pVertexInputState = &vertexInputInfo;
+    GraphicPipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+    GraphicPipelineCreateInfo.pViewportState = &viewportState;
+    GraphicPipelineCreateInfo.pRasterizationState = &rasterizer;
+    GraphicPipelineCreateInfo.pMultisampleState = &multisampling;
+    GraphicPipelineCreateInfo.pColorBlendState = &colorBlending;
+    GraphicPipelineCreateInfo.pDynamicState = &dynamicState;
+    GraphicPipelineCreateInfo.layout = PipelineLayout;
+    GraphicPipelineCreateInfo.renderPass = RenderPass;
+    GraphicPipelineCreateInfo.subpass = 0;
+    GraphicPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+    GraphicPipelineCreateInfo.basePipelineIndex = -1; // Optional
     
-    check(vkCreateGraphicsPipelines(LogicDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &GraphicsPipeline) == VK_SUCCESS);
+    check(vkCreateGraphicsPipelines(LogicDevice, VK_NULL_HANDLE, 1, &GraphicPipelineCreateInfo, nullptr, &GraphicsPipeline) == VK_SUCCESS);
     
     vkDestroyShaderModule(LogicDevice, VertexShaderModule, nullptr);
     vkDestroyShaderModule(LogicDevice, FragmentShaderModule, nullptr);
@@ -686,33 +686,43 @@ void HelloTriangleApplication::RecordCommandBuffer(VkCommandBuffer InCommandBuff
     check(vkEndCommandBuffer(InCommandBuffer) == VK_SUCCESS);
 }
 
-void HelloTriangleApplication::CreateVertexBuffer()
+void HelloTriangleApplication::CreateBuffer(VkDeviceSize InBufferSize, VkBufferUsageFlags InBufferUsage,
+    VkMemoryPropertyFlags properties, VkBuffer& OutBuffer, VkDeviceMemory& OutBufferMemory)
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.size = InBufferSize;
+    bufferInfo.usage = InBufferUsage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VKFollowLog("vkCreateBuffer")
-    check(vkCreateBuffer(LogicDevice, &bufferInfo, nullptr, &VertexBuffer) == VK_SUCCESS);
+    check(vkCreateBuffer(LogicDevice, &bufferInfo, nullptr, &OutBuffer) == VK_SUCCESS);
     
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(LogicDevice, VertexBuffer, &memRequirements);
+    vkGetBufferMemoryRequirements(LogicDevice, OutBuffer, &memRequirements);
 
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    VkMemoryAllocateInfo AllocInfo{};
+    AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    AllocInfo.allocationSize = memRequirements.size;
+    AllocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
+    check(vkAllocateMemory(LogicDevice, &AllocInfo, nullptr, &OutBufferMemory) == VK_SUCCESS);
+    
+    // 为buffer指定内存, 在Vulkan中的操作为绑定.
+    vkBindBufferMemory(LogicDevice, OutBuffer, OutBufferMemory, 0);
+}
 
-    check(vkAllocateMemory(LogicDevice, &allocInfo, nullptr, &VertexBufferMemory) == VK_SUCCESS);
-
-    vkBindBufferMemory(LogicDevice, VertexBuffer, VertexBufferMemory, 0);
-
+void HelloTriangleApplication::CreateVertexBuffer()
+{
+    VkDeviceSize BufferSize = sizeof(vertices[0]) * vertices.size();
+    CreateBuffer( BufferSize,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VertexBuffer, VertexBufferMemory);
+    
     // 将Vertex数据拷贝到VertexBufferMemory中
     void* data;
-    vkMapMemory(LogicDevice, VertexBufferMemory, 0, bufferInfo.size, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+    vkMapMemory(LogicDevice, VertexBufferMemory, 0, BufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t) BufferSize);
     vkUnmapMemory(LogicDevice, VertexBufferMemory);
 }
 

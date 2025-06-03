@@ -184,7 +184,10 @@ private:
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer InCommandBuffer, uint32 InImageIndex);
 
+    void CreateBuffer(VkDeviceSize InBufferSize, VkBufferUsageFlags InBufferUsage, VkMemoryPropertyFlags properties,
+        VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void CreateVertexBuffer();
+    
     uint32 FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties) ;
     
     void PickPhysicalDevice();
