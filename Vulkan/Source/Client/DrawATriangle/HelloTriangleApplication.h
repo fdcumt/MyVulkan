@@ -149,6 +149,7 @@ private:
     
     std::vector<VkCommandBuffer> CommandBuffers;
     VkCommandPool CommandPool;
+    VkCommandPool CommandPoolForCopy;
 
     std::vector<VkSemaphore> ImageAvailableSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
@@ -181,12 +182,15 @@ private:
     
     // for command buffer
     void CreateCommandPool();
+    void CreateCommandPoolForCopy();
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer InCommandBuffer, uint32 InImageIndex);
 
     void CreateBuffer(VkDeviceSize InBufferSize, VkBufferUsageFlags InBufferUsage, VkMemoryPropertyFlags properties,
         VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void CreateVertexBuffer();
+    void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
     
     uint32 FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties) ;
     

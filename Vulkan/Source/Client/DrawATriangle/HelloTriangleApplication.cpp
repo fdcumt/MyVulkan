@@ -66,6 +66,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreateCommandPool();
+    CreateCommandPoolForCopy();
     CreateVertexBuffer();
     CreateCommandBuffers();
     CreateSyncObjects();
@@ -555,6 +556,19 @@ void HelloTriangleApplication::CreateCommandPool()
     check(vkCreateCommandPool(LogicDevice, &poolInfo, nullptr, &CommandPool) == VK_SUCCESS);
 }
 
+void HelloTriangleApplication::CreateCommandPoolForCopy()
+{
+    FQueueFamilyIndices queueFamilyIndices = FindQueueFamily(PhysicalDevice);
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.GraphicsFamily.ValueRef();
+    
+    VKFollowLog("vkCreateCommandPool for copy");
+    check(vkCreateCommandPool(LogicDevice, &poolInfo, nullptr, &CommandPoolForCopy) == VK_SUCCESS);
+}
+
 void HelloTriangleApplication::CreateCommandBuffers()
 {
     CommandBuffers.resize(MaxFrameInFlight);
@@ -713,17 +727,70 @@ void HelloTriangleApplication::CreateBuffer(VkDeviceSize InBufferSize, VkBufferU
 
 void HelloTriangleApplication::CreateVertexBuffer()
 {
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
     VkDeviceSize BufferSize = sizeof(vertices[0]) * vertices.size();
+    
     CreateBuffer( BufferSize,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        VertexBuffer, VertexBufferMemory);
+        stagingBuffer, stagingBufferMemory);
     
     // 将Vertex数据拷贝到VertexBufferMemory中
     void* data;
-    vkMapMemory(LogicDevice, VertexBufferMemory, 0, BufferSize, 0, &data);
+    vkMapMemory(LogicDevice, stagingBufferMemory, 0, BufferSize, 0, &data);
     memcpy(data, vertices.data(), (size_t) BufferSize);
-    vkUnmapMemory(LogicDevice, VertexBufferMemory);
+    vkUnmapMemory(LogicDevice, stagingBufferMemory);
+
+    CreateBuffer(BufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VertexBuffer, VertexBufferMemory);
+    
+    CopyBuffer(stagingBuffer, VertexBuffer, BufferSize);
+    
+    vkDestroyBuffer(LogicDevice, stagingBuffer, nullptr);
+    vkFreeMemory(LogicDevice, stagingBufferMemory, nullptr);
+}
+
+void HelloTriangleApplication::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+    // 创建一个专门用于GPU内部拷贝数据的buffer(从GPU一块内存的数据, 拷贝到另一块内存上.)
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = CommandPoolForCopy;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(LogicDevice, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // 只使用一次该CmdBuffer
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    {
+        // copy
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0; // Optional
+        copyRegion.dstOffset = 0; // Optional
+        copyRegion.size = size;
+        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+    }
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+    vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+
+    // 等待GraphicQueue执行完
+    vkQueueWaitIdle(GraphicsQueue);
+
+    vkFreeCommandBuffers(LogicDevice, CommandPoolForCopy, 1, &commandBuffer);
+    
 }
 
 uint32 HelloTriangleApplication::FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties)
@@ -887,6 +954,10 @@ void HelloTriangleApplication::Cleanup()
     // CommandPool销毁时会自动销毁其内部的Commandbuffer, 所以不用再处理CommandBuffer.
     VKFollowLog("vkDestroyCommandPool");
     vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
+
+    // CommandPool销毁时会自动销毁其内部的Commandbuffer, 所以不用再处理CommandBuffer.
+    VKFollowLog("vkDestroyCommandPool For Copy");
+    vkDestroyCommandPool(LogicDevice, CommandPoolForCopy, nullptr);
 
     VKFollowLog("vkDestroyDevice");
     vkDestroyDevice(LogicDevice, nullptr);
