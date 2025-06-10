@@ -48,13 +48,24 @@ struct Vertex {
     }
 };
 
+// const std::vector<Vertex> vertices = {
+//     //{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+//     //{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+//     //{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+//     {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+//  {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+//  {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+// };
+
 const std::vector<Vertex> vertices = {
-    //{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    //{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    //{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-    {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
- {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
- {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> Indices = {
+    0, 1, 2, 2, 3, 0
 };
 
 struct FQueueFamilyIndices
@@ -146,6 +157,9 @@ private:
 
     VkBuffer VertexBuffer;
     VkDeviceMemory VertexBufferMemory;
+
+    VkBuffer IndexBuffer;
+    VkDeviceMemory IndexBufferMemory;
     
     std::vector<VkCommandBuffer> CommandBuffers;
     VkCommandPool CommandPool;
@@ -191,6 +205,7 @@ private:
     void CreateVertexBuffer();
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
+    void CreateIndexBuffer();
     
     uint32 FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties) ;
     

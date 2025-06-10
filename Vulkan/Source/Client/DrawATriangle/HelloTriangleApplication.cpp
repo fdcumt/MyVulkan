@@ -68,6 +68,7 @@ void HelloTriangleApplication::InitVulkan()
     CreateCommandPool();
     CreateCommandPoolForCopy();
     CreateVertexBuffer();
+    CreateIndexBuffer();
     CreateCommandBuffers();
     CreateSyncObjects();
 }
@@ -689,13 +690,16 @@ void HelloTriangleApplication::RecordCommandBuffer(VkCommandBuffer InCommandBuff
         VkBuffer vertexBuffers[] = {VertexBuffer};
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(InCommandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(InCommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
         
         //VKFollowLog("vkCmdDraw");
-        vkCmdDraw(InCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+        //vkCmdDraw(InCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+
+        //VKFollowLog("vkCmdDrawIndexed");
+        vkCmdDrawIndexed(InCommandBuffer, static_cast<uint32_t>(Indices.size()), 1, 0, 0, 0);
     }
     //VKFollowLog("vkCmdEndRenderPass");
     vkCmdEndRenderPass(InCommandBuffer);
-
     //VKFollowLog("vkEndCommandBuffer");
     check(vkEndCommandBuffer(InCommandBuffer) == VK_SUCCESS);
 }
@@ -790,7 +794,33 @@ void HelloTriangleApplication::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer
     vkQueueWaitIdle(GraphicsQueue);
 
     vkFreeCommandBuffers(LogicDevice, CommandPoolForCopy, 1, &commandBuffer);
-    
+}
+
+void HelloTriangleApplication::CreateIndexBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(Indices[0]) * Indices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    CreateBuffer(bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(LogicDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, Indices.data(), (size_t) bufferSize);
+    vkUnmapMemory(LogicDevice, stagingBufferMemory);
+
+    CreateBuffer(bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        IndexBuffer, IndexBufferMemory);
+
+    CopyBuffer(stagingBuffer, IndexBuffer, bufferSize);
+
+    vkDestroyBuffer(LogicDevice, stagingBuffer, nullptr);
+    vkFreeMemory(LogicDevice, stagingBufferMemory, nullptr);
 }
 
 uint32 HelloTriangleApplication::FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties)
@@ -940,6 +970,11 @@ void HelloTriangleApplication::Cleanup()
         vkDestroyBuffer(LogicDevice, VertexBuffer, nullptr);
         VKFollowLog("vkFreeMemory-VertexBufferMemory");
         vkFreeMemory(LogicDevice, VertexBufferMemory, nullptr);
+        
+        VKFollowLog("vkDestroyBuffer-IndexBuffer");
+        vkDestroyBuffer(LogicDevice, IndexBuffer, nullptr);
+        VKFollowLog("vkFreeMemory-IndexBufferMemory");
+        vkFreeMemory(LogicDevice, IndexBufferMemory, nullptr);
     }
 
     // semaphone and fence
