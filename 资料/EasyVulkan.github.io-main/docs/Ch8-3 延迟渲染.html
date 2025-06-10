@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ch8-3 延迟渲染 &mdash; EasyVulkan</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="搜索" href="search.html" />
+    <link rel="next" title="Ch8-4 预乘Alpha" href="Ch8-4%20%E9%A2%84%E4%B9%98Alpha.html" />
+    <link rel="prev" title="Ch8-2 深度测试和深度可视化" href="Ch8-2%20%E6%B7%B1%E5%BA%A6%E6%B5%8B%E8%AF%95%E5%92%8C%E6%B7%B1%E5%BA%A6%E5%8F%AF%E8%A7%86%E5%8C%96.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> EasyVulkan
+            <img src="_static/logo1.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">第一章 初始化</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ch1-0%20%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C.html">Ch1-0 准备工作</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch1-1%20%E5%88%9B%E5%BB%BAGLFW%E7%AA%97%E5%8F%A3.html">Ch1-1 创建GLFW窗口</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch1-2%20%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B.html">Ch1-2 初始化流程</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch1-3%20%E5%88%9B%E5%BB%BAVK%E5%AE%9E%E4%BE%8B%E4%B8%8E%E9%80%BB%E8%BE%91%E8%AE%BE%E5%A4%87.html">Ch1-3 创建VK实例与逻辑设备</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch1-4%20%E5%88%9B%E5%BB%BA%E4%BA%A4%E6%8D%A2%E9%93%BE.html">Ch1-4 创建交换链</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">第二章 绘制一个三角形</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ch2-0%20%E4%BB%A3%E7%A0%81%E6%95%B4%E7%90%86%E5%8F%8A%E4%B8%80%E4%BA%9B%E8%BE%85%E5%8A%A9%E7%B1%BB.html">Ch2-0 代码整理及一些辅助类</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch2-1%20Rendering%20Loop.html">Ch2-1 Rendering Loop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch2-2%20%E5%88%9B%E5%BB%BA%E6%B8%B2%E6%9F%93%E9%80%9A%E9%81%93%E5%92%8C%E5%B8%A7%E7%BC%93%E5%86%B2.html">Ch2-2 创建渲染通道和帧缓冲</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch2-3%20%E5%88%9B%E5%BB%BA%E7%AE%A1%E7%BA%BF%E5%B9%B6%E7%BB%98%E5%88%B6%E4%B8%89%E8%A7%92%E5%BD%A2.html">Ch2-3 创建管线并绘制三角形</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">第三章 纵观Vulkan</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-1%20%E5%90%8C%E6%AD%A5%E5%8E%9F%E8%AF%AD.html">Ch3-1 同步原语</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-2%20%E5%9B%BE%E5%83%8F%E4%B8%8E%E7%BC%93%E5%86%B2%E5%8C%BA.html">Ch3-2 图像与缓冲区</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-3%20%E7%AE%A1%E7%BA%BF%E5%B8%83%E5%B1%80%E5%92%8C%E7%AE%A1%E7%BA%BF.html">Ch3-3 管线布局和管线</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-4%20%E6%B8%B2%E6%9F%93%E9%80%9A%E9%81%93%E5%92%8C%E5%B8%A7%E7%BC%93%E5%86%B2.html">Ch3-4 渲染通道和帧缓冲</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-5%20%E5%91%BD%E4%BB%A4%E7%BC%93%E5%86%B2%E5%8C%BA.html">Ch3-5 命令缓冲区</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-6%20%E6%8F%8F%E8%BF%B0%E7%AC%A6.html">Ch3-6 描述符</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-7%20%E9%87%87%E6%A0%B7%E5%99%A8.html">Ch3-7 采样器</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch3-8%20%E6%9F%A5%E8%AF%A2.html">Ch3-8 查询</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">第四章 着色器</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ch4-1%20%E7%9D%80%E8%89%B2%E5%99%A8%E6%A8%A1%E7%BB%84.html">Ch4-1 着色器模组</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch4-2%20%E9%A1%B6%E7%82%B9%E7%9D%80%E8%89%B2%E5%99%A8.html">Ch4-2 顶点着色器</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch4-3%20%E7%89%87%E6%AE%B5%E7%9D%80%E8%89%B2%E5%99%A8.html">Ch4-3 片段着色器</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">第五章 封装常用对象</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ch5-0%20VKBase%2B.h.html">Ch5-0 VKBase+.h</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch5-1%20%E5%90%84%E7%A7%8D%E7%BC%93%E5%86%B2%E5%8C%BA.html">Ch5-1 各种缓冲区</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch5-2%202D%E8%B4%B4%E5%9B%BE%E5%8F%8A%E7%94%9F%E6%88%90Mipmap.html">Ch5-2 2D贴图及生成Mipmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch5-3%202D%E8%B4%B4%E5%9B%BE%E6%95%B0%E7%BB%84.html">Ch5-3 2D贴图数组</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">第六章 进阶Vulkan</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ch6-0%20%E4%BD%BF%E7%94%A8%E6%96%B0%E7%89%88%E6%9C%AC%E7%89%B9%E6%80%A7.html">Ch6-0 使用新版本特性</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch6-1%20%E6%97%A0%E5%9B%BE%E5%83%8F%E5%B8%A7%E7%BC%93%E5%86%B2.html">Ch6-1 无图像帧缓冲</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch6-2%20%E5%8A%A8%E6%80%81%E6%B8%B2%E6%9F%93.html">Ch6-2 动态渲染</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">第七章 基础示例</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ch7-1%20%E5%88%9D%E8%AF%86%E9%A1%B6%E7%82%B9%E7%BC%93%E5%86%B2%E5%8C%BA.html">Ch7-1 初识顶点缓冲区</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch7-2%20%E5%88%9D%E8%AF%86%E7%B4%A2%E5%BC%95%E7%BC%93%E5%86%B2%E5%8C%BA.html">Ch7-2 初识索引缓冲区</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch7-3%20%E5%88%9D%E8%AF%86%E5%AE%9E%E4%BE%8B%E5%8C%96%E7%BB%98%E5%88%B6.html">Ch7-3 初识实例化绘制</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch7-4%20%E5%88%9D%E8%AF%86Push%20Constant.html">Ch7-4 初识Push Constant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch7-5%20%E5%88%9D%E8%AF%86Uniform%E7%BC%93%E5%86%B2%E5%8C%BA.html">Ch7-5 初识Uniform缓冲区</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch7-6%20%E6%8B%B7%E8%B4%9D%E5%9B%BE%E5%83%8F%E5%88%B0%E5%B1%8F%E5%B9%95.html">Ch7-6 拷贝图像到屏幕</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch7-7%20%E4%BD%BF%E7%94%A8%E8%B4%B4%E5%9B%BE.html">Ch7-7 使用贴图</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">第八章 简单示例</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Ch8-1%20%E7%A6%BB%E5%B1%8F%E6%B8%B2%E6%9F%93.html">Ch8-1 离屏渲染</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch8-2%20%E6%B7%B1%E5%BA%A6%E6%B5%8B%E8%AF%95%E5%92%8C%E6%B7%B1%E5%BA%A6%E5%8F%AF%E8%A7%86%E5%8C%96.html">Ch8-2 深度测试和深度可视化</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Ch8-3 延迟渲染</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1">冯氏光照</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id2">漫反射</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">高光</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">创建渲染通道和帧缓冲</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">顶点和索引数据</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#uniform">Uniform数据</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">书写着色器并创建管线</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gbuffer-vert-shader">GBuffer.vert.shader</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gbuffer-frag-shader">GBuffer.frag.shader</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#composition-vert-shader">Composition.vert.shader</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#composition-frag-shader">Composition.frag.shader</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id7">求取世界空间坐标</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id8">光照计算</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#id9">创建管线</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id10">写入描述符</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id11">绘制</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Ch8-4%20%E9%A2%84%E4%B9%98Alpha.html">Ch8-4 预乘Alpha</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ch8-5%20sRGB%E8%89%B2%E5%BD%A9%E7%A9%BA%E9%97%B4%E4%B8%8E%E5%BC%80%E5%90%AFHDR.html">Ch8-5 sRGB色彩空间与开启HDR</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">附录</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="Ap1-1%20%E8%BF%90%E8%A1%8C%E6%9C%9F%E7%BC%96%E8%AF%91GLSL.html">Ap1-1 运行期编译GLSL</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">EasyVulkan</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Ch8-3 延迟渲染</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ch8-3">
+<h1>Ch8-3 延迟渲染<a class="headerlink" href="#ch8-3" title="Permalink to this heading"></a></h1>
+<p>
+    本节的<span class="path">main.cpp</span>对应示例代码中的：<a href="https://github.com/EasyVulkan/EasyVulkan.github.io/tree/main/solution/EasyVulkan_Ch8/Ch8-3.hpp">Ch8-3.hpp</a>
+</p>
+<p>
+    虽然延迟渲染属于图形编程常识性内容，这里还是简单介绍下概念。
+</p>
+<p>
+    <strong>正向渲染</strong>
+    <br>
+    在绘制场景中每个物件的时候完成其光照计算，这种传统的渲染方式即是正向渲染（forward rendering）。
+</p>
+<p>
+    <strong>延迟渲染</strong>
+    <br>
+    渲染过程中绘制的许多片段最终会因深度测试而被遮挡掉，那么显然，打从一开始就没必要对这些片段进行光照计算。
+    <br>
+    延迟渲染（deferred rendering）即是将本该在绘制每个物件时进行的光照计算延后，只对最终保留下来的片段进行光照计算，以此来大幅节省运算开销的渲染手段。
+</p>
+<p>
+    延迟渲染的具体做法分为两步：
+    <br>
+    1.绘制场景中的物件但不计算光照，而是将光照计算所需的信息写入图像附件，这些图像附件统称为几何缓冲（G-buffer）
+    <br>
+    2.对交换链图像中的每个像素，读取G-buffer中相应位置的数据，进行光照计算，这一步叫合成（composition）
+    <br>
+    如此一来，进行光照计算的片段着色器调用次数，便等于交换链图像的像素数，在确定的分辨率下是个恒定值，不会因场景中物件的增多而增长。
+</p>
+<p>
+    <strong>前向透明度</strong>
+    <br>
+    渲染半透明物体时，需要透出底下的颜色。
+    <br>
+    因为延迟渲染中的G-buffer只有深度测试后最终留下来的片段，从中无法获取所谓“底下”的信息，因此无法延迟渲染半透明物体。
+    <br>
+    前向透明度（forward transparency）指在延迟渲染结束时保留深度值，然后正向渲染半透明物体的做法。
+</p>
+<p>
+    本文以演示Vulkan API为主要目的，实现一套最简单的延迟渲染的流程，不考虑前向透明度。
+</p><section id="id1">
+<h2>冯氏光照<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h2>
+<p>
+    考虑到讲解BRDF光照模型估计得花上四节的篇幅，这一节就用较为老旧的冯氏光照（Phong lighting）模型吧。
+</p>
+<p>
+    冯氏光照模型中，光照被分为三个部分：环境光、漫反射、高光。
+    <br>
+    环境光是数值固定的底色，不做展开。漫反射和高光可由较为简单的材质参数——颜色和高光度——算得。
+</p><section id="id2">
+<h3>漫反射<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
+<img alt="_images/ch8-3-1.png" src="_images/ch8-3-1.png" class="align-left">
+<p>
+    如左图所示，一束定向光打向物体表面，S是垂直于光路的截面，光打在物体表面S'的部分上。
+    <br>
+    不考虑光在空气等介质中的损耗，因能量守恒，S和S'上光的辐射通量相等。
+    <br>
+    那么辐照度（单位面积上的辐射的能量）与上述两个面积的关系是：
+    <br>
+    <code>S'上的辐照度 * S'的面积 = S上的辐照度 * S的面积 </code>，变形为<code>S'上的辐照度 = S上的辐照度 * S的面积 / S'的面积</code>，
+    <br>
+    由三角函数关系可得：
+    <br>
+    <code>S'上的辐照度 = S上的辐照度 * cos(入射角)</code>
+</p>
+<div style="clear:both"></div>
+<img alt="_images/ch8-3-2.png" src="_images/ch8-3-2.png" class="align-right">
+<p>
+    朗伯余弦定律（<a href="https://en.wikipedia.org/wiki/Lambert's_cosine_law#Details_of_equal_brightness_effect">英文维基：Lambert's cosine law</a>）表明“从各个方向看到的漫反射表面皆是一样的亮度”。
+</p>
+<ul>
+    <li>
+        <p>
+            如右图所示，而若一束漫反射光垂直打在观察面上，则观察面与物体表面的夹角等于出射角，出射光打在观察面上的面积为<code>S'的面积 * cos(出射角)</code>。
+            <br>
+            对于特定方向的漫反射光，在与物体表面平行的平面上，其辐照度与出射角的余弦成正比，则S'上特定方向出射光的辐射通量为<code>S'的面积 * S'上的辐照度 * cos(出射角)</code>，与前面的式子约分后可知，观察面上的辐照度等于S'上的辐照度，即说明观察到的漫反射亮度与出射角无关。
+        </p>
+    </li>
+    <li>
+        <p>
+            如果漫反射光并非垂直打在观察面上该怎么办？
+            <br>
+            想想你的视觉，或许是大脑有校正，至少人并不会觉得用余光看一个物体比盯着该物体时看到的颜色更暗，所以在渲染中也不用管这种事了。
+        </p>
+    </li>
+</ul>
+<p>
+    冯氏光照模型不考虑入射光与所有方向的出射光之间的能量守恒，因此关于辐照度的推理就到此为止了。
+    <br>
+    用物体的反照率（albedo，即一般认知中的“物体本身固有的颜色”）乘以光在物体表面的辐照度，求取漫反射的数值：
+    <br>
+    <code>物体表面的漫反射 = 物体表面对RGB三色的反照率 * 光在物体表面的RGB三色的辐照度</code>
+</p></section>
+<section id="id3">
+<h3>高光<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<img alt="_images/ch8-3-3.png" src="_images/ch8-3-3.png" class="align-left">
+<p>
+    冯氏光照中，视线越接近镜面反射光线，高光越强烈。
+    <br>
+    也就是说，镜面反射光线与视线的夹角能反映高光的强度。
+    <br>
+    但相比计算镜面反射的方向，通常更倾向于考虑视线与入射光线夹角的平分线，显然这条线越靠近法线，视线就越接近镜面反射光线。
+</p>
+<p>
+    视线与入射光线夹角的平分线对应的向量叫半程向量，计算半程向量比计算镜面反射方向，运算量要少一些。
+</p>
+<div style="clear:both"></div>
+<p>
+    冯氏光照中，将半程向量与法向量点乘的结果（即两者夹角的余弦值）做乘方，再乘以物体的高光度（通常记作specular）和光在物体表面的辐照度以求取高光的数值：
+    <br>
+    <code>物体表面的高光 = 物体表面的高光度 * 光在物体表面的RGB三色的辐照度 * (半程向量 · 法向量)^shininess</code>
+    <br>
+    这里点乘的结果不超过1，因此shininess这个指数越大，光斑越小。你不必考虑shininess有什么物理意义，它没有。
+    <br>
+    这里考虑无色镜面反射，你也可以让高光度乘以反照率来获得RGB三色的高光度。
+</p></section>
+</section>
+<section id="id4">
+<h2>创建渲染通道和帧缓冲<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h2>
+<p>
+    对于通过延迟渲染实现冯氏光照，渲染通道的结构一般是这样的：
+    <br>
+    （下图中子通道#0的G-buffer例图为带有透明度的原图，子通道#1的例图将RGBA中A的数值以灰度图的形式可视化）
+</p>
+<img alt="_images/ch8-3-4.png" src="_images/ch8-3-4.png">
+<ul>
+    <li>
+        <p>
+            Vulkan标准规定实现必须支持<span class="enum">VK_FORMAT_R16G16B16A16_SFLOAT</span>格式的颜色附件，但是否支持<span class="enum">VK_FORMAT_R16G16B16_SFLOAT</span>格式的颜色附件则取决于硬件。因此虽然位置坐标和法向量都只有三个分量，出于省事和可移植性考虑，这里使用四分量的格式。
+        </p>
+    </li>
+    <li>
+        <p>
+            如果你觉得16位浮点数的精度不够，Vulkan标准也规定了实现必须支持<span class="enum">VK_FORMAT_R32G32B32A32_SFLOAT</span>格式的颜色附件（不保证能混色，不过G-buffer用不着混色）。但16位浮点附件和32位浮点附件最终算出的颜色只有约（8位色模式下）4个色阶的差异。
+        </p>
+    </li>
+</ul>
+<p>
+    世界空间的位置坐标，可以通过深度附件中的深度值、片段的NDC坐标、投影矩阵、观察矩阵算得，因此上图中还可以减少一个图像附件以节省设备内存。
+    <br>
+    深度值是用来计算相机坐标系下的z坐标的，这一步可以被省掉：用来存法向量的图像附件只用了三个分量，可以将相机空间中的z坐标存入其第四个分量。
+    <br>
+    于是结构变成这样：
+</p>
+<img alt="_images/ch8-3-5.png" src="_images/ch8-3-5.png">
+<p>
+    在<span class="path">EasyVulkan.hpp</span>，easyVulkan命名空间中，定义相关的图像附件，及用来创建这些附件、渲染通道、帧缓冲的函数<span class="fn">CreateRpwf_DeferredToScreen</span>(...)。
+    <br>
+    为简化代码，这次就不为每张交换链图像分别创建一套对应的图像附件了：
+</p>
+<pre class="code">
+<span class="type">colorAttachment</span> ca_deferredToScreen_normalZ;        <span class="cmt">//法线和相机坐标系下的z值</span>
+<span class="type">colorAttachment</span> ca_deferredToScreen_albedoSpecular; <span class="cmt">//颜色和高光度</span>
+<span class="type">depthStencilAttachment</span> dsa_deferredToScreen;        <span class="cmt">//深度</span>
+<span class="kw">const auto</span>&amp; <span class="fn">CreateRpwf_DeferredToScreen</span>(<span class="type">VkFormat</span> <span class="par">depthStencilFormat</span> = <span class="enum">VK_FORMAT_D24_UNORM_S8_UINT</span>) {
+    <span class="kw">static</span> <span class="type">renderPassWithFramebuffers</span> rpwf;
+    <span class="kw">static</span> <span class="type">VkFormat</span> _depthStencilFormat = <span class="par">depthStencilFormat</span>; <span class="cmt">//因为一会儿需要用lambda定义重建交换链时的回调函数，把格式存到静态变量</span>
+
+    <span class="cmt">/*待后续填充*/</span>
+
+    <span class="kw">return</span> rpwf;
+}
+</pre>
+<p>
+    四个图像附件的描述如下：
+</p>
+<pre class="code">
+<span class="type">VkAttachmentDescription</span> attachmentDescriptions[4] = {
+    { <span class="cmt">//交换链图像</span>
+        .format = <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">SwapchainCreateInfo</span>().imageFormat,
+        .samples = <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>,
+        .loadOp = <span class="enum">VK_ATTACHMENT_LOAD_OP_CLEAR</span>,
+        .storeOp = <span class="enum">VK_ATTACHMENT_STORE_OP_STORE</span>,
+        .stencilLoadOp = <span class="enum">VK_ATTACHMENT_LOAD_OP_DONT_CARE</span>,
+        .stencilStoreOp = <span class="enum">VK_ATTACHMENT_STORE_OP_DONT_CARE</span>,
+        .finalLayout = <span class="enum">VK_IMAGE_LAYOUT_PRESENT_SRC_KHR</span> },
+    { <span class="cmt">//法线和相机坐标系下的z值</span>
+        .format = <span class="enum">VK_FORMAT_R16G16B16A16_SFLOAT</span>,
+        .samples = <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>,
+        .loadOp = <span class="enum">VK_ATTACHMENT_LOAD_OP_CLEAR</span>,
+        .storeOp = <span class="enum">VK_ATTACHMENT_STORE_OP_DONT_CARE</span>,
+        .stencilLoadOp = <span class="enum">VK_ATTACHMENT_LOAD_OP_DONT_CARE</span>,
+        .stencilStoreOp = <span class="enum">VK_ATTACHMENT_STORE_OP_DONT_CARE</span>,
+        .finalLayout = <span class="enum">VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL</span> },
+    { <span class="cmt">//颜色和高光度</span>
+        .format = <span class="enum">VK_FORMAT_R8G8B8A8_UNORM</span>, <span class="cmt">//与上一个只有格式不同</span>
+        .samples = <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>,
+        .loadOp = <span class="enum">VK_ATTACHMENT_LOAD_OP_CLEAR</span>,
+        .storeOp = <span class="enum">VK_ATTACHMENT_STORE_OP_DONT_CARE</span>,
+        .stencilLoadOp = <span class="enum">VK_ATTACHMENT_LOAD_OP_DONT_CARE</span>,
+        .stencilStoreOp = <span class="enum">VK_ATTACHMENT_STORE_OP_DONT_CARE</span>,
+        .finalLayout = <span class="enum">VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL</span> },
+    { <span class="cmt">//深度和模板</span>
+        .format = _depthStencilFormat,
+        .samples = <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>,
+        .loadOp = <span class="enum">VK_ATTACHMENT_LOAD_OP_CLEAR</span>,
+        .storeOp = <span class="enum">VK_ATTACHMENT_STORE_OP_DONT_CARE</span>,
+        .stencilLoadOp = _depthStencilFormat &gt;= <span class="enum">VK_FORMAT_S8_UINT</span> ? <span class="enum">VK_ATTACHMENT_LOAD_OP_CLEAR</span> : <span class="enum">VK_ATTACHMENT_LOAD_OP_DONT_CARE</span>,
+        .stencilStoreOp = <span class="enum">VK_ATTACHMENT_STORE_OP_DONT_CARE</span>,
+        .finalLayout = <span class="enum">VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL</span> }
+};
+</pre>
+<p>
+    子通道的描述：
+</p>
+<pre class="code">
+<span class="type">VkAttachmentReference</span> attachmentReferences_subpass0[3] = {
+    { 1, <span class="enum">VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL</span> },        <span class="cmt">//对应normalZ</span>
+    { 2, <span class="enum">VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL</span> },        <span class="cmt">//对应albedoSpecular</span>
+    { 3, <span class="enum">VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL</span> } <span class="cmt">//对应深度和模板</span>
+};
+<span class="type">VkAttachmentReference</span> attachmentReferences_subpass1[3] = {
+    { 1, <span class="enum">VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL</span> }, <span class="cmt">//对应normalZ</span>
+    { 2, <span class="enum">VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL</span> }, <span class="cmt">//对应albedoSpecular</span>
+    { 0, <span class="enum">VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL</span> }  <span class="cmt">//对应交换链图像</span>
+};
+<span class="type">VkSubpassDescription</span> subpassDescriptions[2] = {
+    { <span class="cmt">//第一个子通道，生成G-buffer</span>
+        .pipelineBindPoint = <span class="enum">VK_PIPELINE_BIND_POINT_GRAPHICS</span>,
+        .colorAttachmentCount = 2,
+        .pColorAttachments = attachmentReferences_subpass0,
+        .pDepthStencilAttachment = attachmentReferences_subpass0 + 2 },
+    { <span class="cmt">//第二个子通道，进行composition</span>
+        .pipelineBindPoint = <span class="enum">VK_PIPELINE_BIND_POINT_GRAPHICS</span>,
+        .inputAttachmentCount = 2,
+        .pInputAttachments = attachmentReferences_subpass1, <span class="cmt">//将两张G-buffer用作输入附件</span>
+        .colorAttachmentCount = 1,
+        .pColorAttachments = attachmentReferences_subpass1 + 2 }
+};
+</pre>
+<p>
+    渲染通道开始时的子通道依赖：
+</p>
+<pre class="code">
+<span class="type">VkSubpassDependency</span> subpassDependencies[2] = {
+    {
+        .srcSubpass = <span class="mcr">VK_SUBPASS_EXTERNAL</span>,
+        .dstSubpass = 0,
+        .srcStageMask = <span class="enum">VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT</span>,
+        .dstStageMask = <span class="enum">VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT</span>,
+        .srcAccessMask = 0,
+        .dstAccessMask = <span class="enum">VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT</span>,
+        .dependencyFlags = <span class="enum">VK_DEPENDENCY_BY_REGION_BIT</span> },
+    { <span class="cmt">/*渲染通道结束时的依赖，待填充*/</span> }
+};
+</pre>
+<ul>
+    <li>
+        <p>
+            srcStageMask是<span class="enum">VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT</span>（惯例说明：因有栅栏同步，填0也无妨），指代前一帧中在片段着色器中读写G-buffer，除此之外与先前<a class="reference internal" href="Ch8-2%20%E6%B7%B1%E5%BA%A6%E6%B5%8B%E8%AF%95%E5%92%8C%E6%B7%B1%E5%BA%A6%E5%8F%AF%E8%A7%86%E5%8C%96.html#id4">Ch8-2 深度测试和深度可视化</a>中渲染通道开始时的依赖相同。
+        </p>
+    </li>
+</ul>
+<p>
+    填写子通道#0和子通道#1之间的依赖，创建渲染通道：
+</p>
+<pre class="code">
+<span class="type">VkSubpassDependency</span> subpassDependencies[2] = {
+    {
+        .srcSubpass = <span class="mcr">VK_SUBPASS_EXTERNAL</span>,
+        .dstSubpass = 0,
+        .srcStageMask = <span class="enum">VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT</span>,
+        .dstStageMask = <span class="enum">VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT</span>,
+        .srcAccessMask = 0,
+        .dstAccessMask = <span class="enum">VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT</span>,
+        .dependencyFlags = <span class="enum">VK_DEPENDENCY_BY_REGION_BIT</span> },
+    {
+        .srcSubpass = 0,
+        .dstSubpass = 1,
+        .srcStageMask = <span class="enum">VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT</span>,
+        .dstStageMask = <span class="enum">VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT</span>,
+        .srcAccessMask = <span class="enum">VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT</span>,
+        .dstAccessMask = <span class="enum">VK_ACCESS_INPUT_ATTACHMENT_READ_BIT</span>,
+        .dependencyFlags = <span class="enum">VK_DEPENDENCY_BY_REGION_BIT</span> }
+};
+<span class="type">VkRenderPassCreateInfo</span> renderPassCreateInfo = {
+    .attachmentCount = 4,
+    .pAttachments = attachmentDescriptions,
+    .subpassCount = 2,
+    .pSubpasses = subpassDescriptions,
+    .dependencyCount = 2,
+    .pDependencies = subpassDependencies
+};
+rpwf.renderPass.<span class="fn">Create</span>(renderPassCreateInfo);
+</pre>
+<ul>
+    <li>
+        <p>
+            这里即是要求子通道#0中将颜色输出到G-buffer后，在子通道#1中片段着色器读取这些输入附件（<span class="enum">VK_ACCESS_INPUT_ATTACHMENT_READ_BIT</span>）前完成包括交换链图像在内的内存布局转换。
+        </p>
+    </li>
+</ul>
+<p>
+    创建相应的图像附件和帧缓冲。
+    <br>
+    因为用作输入附件的G-buffer在渲染通道结束后就用不着了，图像用途中指定<span class="enum">VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT</span>：
+</p>
+<pre class="code">
+<span class="type">colorAttachment</span> ca_deferredToScreen_normalZ;        <span class="cmt">//法线和相机坐标系下的z值</span>
+<span class="type">colorAttachment</span> ca_deferredToScreen_albedoSpecular; <span class="cmt">//颜色和高光度</span>
+<span class="type">depthStencilAttachment</span> dsa_deferredToScreen;        <span class="cmt">//深度</span>
+<span class="kw">const auto</span>&amp; <span class="fn">CreateRpwf_DeferredToScreen</span>(<span class="type">VkFormat</span> <span class="par">depthStencilFormat</span> = <span class="enum">VK_FORMAT_D24_UNORM_S8_UINT</span>) {
+    <span class="cmt">/*...前面略*/</span>
+    <span class="kw">auto</span> CreateFramebuffers = [] {
+        rpwf.framebuffers.<span class="fn">resize</span>(<span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">SwapchainImageCount</span>());
+        ca_deferredToScreen_normalZ.<span class="fn">Create</span>(<span class="enum">VK_FORMAT_R16G16B16A16_SFLOAT</span>, windowSize, 1, <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>, <span class="enum">VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT</span> | <span class="enum">VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT</span>);
+        ca_deferredToScreen_albedoSpecular.<span class="fn">Create</span>(<span class="enum">VK_FORMAT_R8G8B8A8_UNORM</span>, windowSize, 1, <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>, <span class="enum">VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT</span> | <span class="enum">VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT</span>);
+        dsa_deferredToScreen.<span class="fn">Create</span>(_depthStencilFormat, windowSize, 1, <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>, <span class="enum">VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT</span>);
+        <span class="type">VkImageView</span> attachments[4] = {
+            <span class="mcr">VK_NULL_HANDLE</span>,
+            ca_deferredToScreen_normalZ.<span class="fn">ImageView</span>(),
+            ca_deferredToScreen_albedoSpecular.<span class="fn">ImageView</span>(),
+            dsa_deferredToScreen.<span class="fn">ImageView</span>()
+        };
+        <span class="type">VkFramebufferCreateInfo</span> framebufferCreateInfo = {
+            .renderPass = rpwf.renderPass,
+            .attachmentCount = 4,
+            .pAttachments = attachments,
+            .width = windowSize.width,
+            .height = windowSize.height,
+            .layers = 1
+        };
+        <span class="kw">for</span> (<span class="type">size_t</span> i = 0; i &lt; <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">SwapchainImageCount</span>(); i++)
+            attachments[0] = <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">SwapchainImageView</span>(i),
+            rpwf.framebuffers[i].<span class="fn">Create</span>(framebufferCreateInfo);
+    };
+    <span class="kw">auto</span> DestroyFramebuffers = [] {
+        ca_deferredToScreen_normalZ.<span class="fn">~colorAttachment</span>();
+        ca_deferredToScreen_albedoSpecular.<span class="fn">~colorAttachment</span>();
+        dsa_deferredToScreen.<span class="fn">~depthStencilAttachment</span>();
+        rpwf.framebuffers.<span class="fn">clear</span>();
+    };
+    CreateFramebuffers();
+
+    <span class="mcr">ExecuteOnce</span>(rpwf); <span class="cmt">//防止需重建逻辑设备时，重复添加回调函数</span>
+    <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">AddCallback_CreateSwapchain</span>(CreateFramebuffers);
+    <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">AddCallback_DestroySwapchain</span>(DestroyFramebuffers);
+    <span class="kw">return</span> rpwf;
+}
+</pre></section>
+<section id="id5">
+<h2>顶点和索引数据<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h2>
+<p>
+    在<span class="path">main.cpp</span>中定义顶点数据的结构体：
+</p>
+<pre class="code">
+<span class="kw">struct</span> <span class="type">vertex</span> {
+    glm::<span class="type">vec3</span> position;
+    glm::<span class="type">vec3</span> normal;
+    glm::<span class="type">vec4</span> albedoSpecular;
+};
+</pre>
+<p>
+    基于前一节的顶点数据做修改。
+    <br>
+    因为是立方体，很容易就能写出法线。颜色和高光度随意，我这里用白色以反射任何颜色的光，高光度用了1，你可以指定超过1：
+</p>
+<pre class="code">
+<span class="type">vertex</span> vertices[] = {
+    <span class="cmt">//x+</span>
+    { {  1,  1, -1 }, {  1,  0,  0 }, { 1, 1, 1, 1 } },
+    { {  1, -1, -1 }, {  1,  0,  0 }, { 1, 1, 1, 1 } },
+    { {  1,  1,  1 }, {  1,  0,  0 }, { 1, 1, 1, 1 } },
+    { {  1, -1,  1 }, {  1,  0,  0 }, { 1, 1, 1, 1 } },
+    <span class="cmt">//x-</span>
+    { { -1,  1,  1 }, { -1,  0,  0 }, { 1, 1, 1, 1 } },
+    { { -1, -1,  1 }, { -1,  0,  0 }, { 1, 1, 1, 1 } },
+    { { -1,  1, -1 }, { -1,  0,  0 }, { 1, 1, 1, 1 } },
+    { { -1, -1, -1 }, { -1,  0,  0 }, { 1, 1, 1, 1 } },
+    <span class="cmt">//y+</span>
+    { {  1,  1, -1 }, {  0,  1,  0 }, { 1, 1, 1, 1 } },
+    { {  1,  1,  1 }, {  0,  1,  0 }, { 1, 1, 1, 1 } },
+    { { -1,  1, -1 }, {  0,  1,  0 }, { 1, 1, 1, 1 } },
+    { { -1,  1,  1 }, {  0,  1,  0 }, { 1, 1, 1, 1 } },
+    <span class="cmt">//y-</span>
+    { {  1, -1, -1 }, {  0, -1,  0 }, { 1, 1, 1, 1 } },
+    { { -1, -1, -1 }, {  0, -1,  0 }, { 1, 1, 1, 1 } },
+    { {  1, -1,  1 }, {  0, -1,  0 }, { 1, 1, 1, 1 } },
+    { { -1, -1,  1 }, {  0, -1,  0 }, { 1, 1, 1, 1 } },
+    <span class="cmt">//z+</span>
+    { {  1,  1,  1 }, {  0,  0,  1 }, { 1, 1, 1, 1 } },
+    { {  1, -1,  1 }, {  0,  0,  1 }, { 1, 1, 1, 1 } },
+    { { -1,  1,  1 }, {  0,  0,  1 }, { 1, 1, 1, 1 } },
+    { { -1, -1,  1 }, {  0,  0,  1 }, { 1, 1, 1, 1 } },
+    <span class="cmt">//z-</span>
+    { { -1,  1, -1 }, {  0,  0, -1 }, { 1, 1, 1, 1 } },
+    { { -1, -1, -1 }, {  0,  0, -1 }, { 1, 1, 1, 1 } },
+    { {  1,  1, -1 }, {  0,  0, -1 }, { 1, 1, 1, 1 } },
+    { {  1, -1, -1 }, {  0,  0, -1 }, { 1, 1, 1, 1 } }
+};
+<span class="type">vertexBuffer</span> vertexBuffer_perVertex(<span class="kw">sizeof</span> vertices);
+vertexBuffer_perVertex.<span class="type">TransferData</span>(vertices);
+</pre>
+<p>
+    逐实例输入的位移、索引数据就跟Ch8-2中一样吧：
+</p>
+<pre class="code">
+glm::<span class="type">vec3</span> offsets[] = {
+    { -4, -4,  6 }, {  4, -4,  6 },
+    { -4,  4, 10 }, {  4,  4, 10 },
+    { -4, -4, 14 }, {  4, -4, 14 },
+    { -4,  4, 18 }, {  4,  4, 18 },
+    { -4, -4, 22 }, {  4, -4, 22 },
+    { -4,  4, 26 }, {  4,  4, 26 }
+};
+<span class="type">vertexBuffer</span> vertexBuffer_perInstance(<span class="kw">sizeof</span> offsets);
+vertexBuffer_perInstance.<span class="type">TransferData</span>(offsets);
+<span class="type">uint16_t</span> indices[36] = { 0, 1, 2, 2, 1, 3 };
+<span class="kw">for</span> (<span class="type">size_t</span> i = 1; i &lt; 6; i++)
+    <span class="kw">for</span> (<span class="type">size_t</span> j = 0; j &lt; 6; j++)
+        indices[i * 6 + j] = indices[j] + i * 4;
+<span class="type">indexBuffer</span> indexBuffer(<span class="kw">sizeof</span> indices);
+indexBuffer.<span class="type">TransferData</span>(indices);
+</pre></section>
+<section id="uniform">
+<h2>Uniform数据<a class="headerlink" href="#uniform" title="Permalink to this heading"></a></h2>
+<p>
+    这次来尝试使用观察矩阵。
+    <br>
+    因为push constant的128字节不够，我打算把投影矩阵、观察矩阵、点光源信息都放进单个uniform缓冲区：
+</p>
+<pre class="code">
+<span class="kw">struct</span> {
+    glm::<span class="type">mat4</span> proj = <span class="fn">FlipVertical</span>(glm::<span class="fn">infinitePerspectiveLH_ZO</span>(glm::<span class="fn">radians</span>(60.f), <span class="kw">float</span>(windowSize.width) / windowSize.height, 0.1f));
+    glm::<span class="type">mat4</span> view = <span class="cmt">/*待填充*/</span>;
+    <span class="type">int32_t</span> lightCount;
+    <span class="kw">struct</span> {
+        <span class="kw">alignas</span>(16) glm::<span class="type">vec3</span> position; <span class="cmt">//光源位置</span>
+        <span class="kw">alignas</span>(16) glm::<span class="type">vec3</span> color;    <span class="cmt">//光的颜色</span>
+        <span class="kw">float</span> strength;                 <span class="cmt">//光的强度</span>
+    } lights[8];
+} descriptorConstants;
+</pre>
+<p>
+    GLM中提供了用于生成观察矩阵的函数glm::<span class=fn>lookAt</span>(...)：
+</p>
+<pre class="code">
+<span class="type">mat4</span> <span class=fn>lookAt</span>(
+    <span class="type">vec3</span> <span class="par">eye</span>,    <span class="cmt">//观察者所在位置</span>
+    <span class="type">vec3</span> <span class="par">center</span>, <span class="cmt">//观察者所视方向上的点</span>
+    <span class="type">vec3</span> <span class="par">up</span>      <span class="cmt">//头顶的方向（请不要纠结观察者是不是人有没有头之类的问题）</span>
+);
+</pre>
+<ul>
+    <li>
+        <p>
+            <span class="par">up</span>不必与观察者所视方向垂直，但不得与观察者所视方向完全同向/反向。
+        </p>
+    </li>
+</ul>
+<p>
+    <code><span class="par">center</span> - <span class="par">eye</span></code>即是观察者所视方向，称为前向量。
+    <br>
+    <span class="par">up</span>与前向量叉乘可得到指向观察者右方的向量，称为右向量。
+    <br>
+    前向量与右向量叉乘得到的结果叫上向量。
+    <br>
+    右向量、上向量、前向量，世界坐标系中的这三个向量与相机空间中三条坐标轴的正方向一一对应。
+</p>
+<p>
+    下面代码中，我显式地调用了glm::<span class=fn>lookAt</span>(...)的左手系版本glm::<span class=fn>lookAtLH</span>(...)。
+    <br>
+    生成的观察矩阵从世界坐标原点看向+z方向，前向量为<code>{ 0, 0, 1 }</code>，那么<span class="par">up</span>为<code>{ -1, 0, 0 }</code>的效果相当于将头逆时针倾斜90°：
+</p>
+<pre class="code">
+glm::<span class="type">mat4</span> view = glm::<span class="fn">lookAtLH</span>(glm::<span class="type">vec3</span>(0, 0, 0), glm::<span class="type">vec3</span>(0, 0, 1), glm::<span class="type">vec3</span>(-1, 0, 0));
+</pre>
+<p>
+    来指定点光源，虽然我前面让<span class="var">lights</span>有8个元素，这里就省事点只用分别为红绿蓝的三个光源，届时哪个光打在哪儿也能分得很清楚。
+    <br>
+    最后把数据扔进uniform缓冲区：
+</p>
+<pre class="code">
+descriptorConstants.lightCount = 3;
+descriptorConstants.lights[0] = { { 0.f,  4.f,  6.f }, { 1.f, 0.f, 0.f }, 100.f }; <span class="cmt">//红光，光源在离观察者最近的两个立方体的正上方</span>
+descriptorConstants.lights[1] = { { 0.f,  0.f, 16.f }, { 0.f, 1.f, 0.f }, 100.f }; <span class="cmt">//绿光，光源在z轴上这堆立方体的中央位置</span>
+descriptorConstants.lights[2] = { { 0.f, -4.f,  6.f }, { 0.f, 0.f, 1.f }, 100.f }; <span class="cmt">//蓝光，光源在离观察者最近的两个立方体的中间</span>
+<span class="type">uniformBuffer</span> uniformBuffer(<span class="kw">sizeof</span> descriptorConstants);
+uniformBuffer.<span class="fn">TransferData</span>(descriptorConstants);
+</pre>
+<p>
+    在这里预先展示下届时的效果：
+</p>
+<img alt="_images/ch8-3-6.png" src="_images/ch8-3-6.png">
+<ul>
+    <li>
+        <p>
+            因“将头逆时针倾斜90°”，与前一节中的图像相比，视野中的物体顺时针转了90°。
+        </p>
+    </li>
+</ul></section>
+<section id="id6">
+<h2>书写着色器并创建管线<a class="headerlink" href="#id6" title="Permalink to this heading"></a></h2>
+<section id="gbuffer-vert-shader">
+<h3>GBuffer.vert.shader<a class="headerlink" href="#gbuffer-vert-shader" title="Permalink to this heading"></a></h3>
+<pre class="code">
+<span class="pragma">#version</span> 460
+<span class="pragma">#pragma shader_stage</span>(vertex)
+
+<span class="kw">layout</span>(location = 0) <span class="kw">in</span> <span class="type">vec3</span> i_Position;         <span class="cmt">//逐顶点</span>
+<span class="kw">layout</span>(location = 1) <span class="kw">in</span> <span class="type">vec3</span> i_Normal;           <span class="cmt">//逐顶点</span>
+<span class="kw">layout</span>(location = 2) <span class="kw">in</span> <span class="type">vec4</span> i_AlbedoSpecular;   <span class="cmt">//逐顶点</span>
+<span class="kw">layout</span>(location = 3) <span class="kw">in</span> <span class="type">vec3</span> i_InstancePosition; <span class="cmt">//逐实例</span>
+<span class="kw">layout</span>(location = 0) <span class="kw">out</span> <span class="type">vec4</span> o_NormalZ;
+<span class="kw">layout</span>(location = 1) <span class="kw">out</span> <span class="type">vec4</span> o_AlbedoSpecular;
+<span class="kw">layout</span>(binding = 0) <span class="kw">uniform</span> descriptorConstants_pv {
+    <span class="type">mat4</span> proj;
+    <span class="type">mat4</span> view; <span class="cmt">//观察矩阵</span>
+};
+
+<span class="kw">void</span> <span class="fn">main</span>() {
+    <span class="type">vec3</span> position = i_Position + i_InstancePosition;
+    gl_Position = proj * view * <span class="type">vec4</span>(position, 1);
+    o_NormalZ = <span class="type">vec4</span>(i_Normal, gl_Position.w); <span class="cmt">//此处gl_Position.w等于相机空间中的z坐标</span>
+    o_AlbedoSpecular = i_AlbedoSpecular;
+}
+</pre>
+<ul>
+    <li>
+        <p>
+            没必要为了获得相机空间中的z坐标而把<code>view * <span class="type">vec4</span>(position, 1)</code>的结果保存到变量，透视投影矩阵与相机空间坐标相乘后得到的<span class="var">gl_Position.w</span>等于相机空间中的z坐标，解释在<a class="reference internal" href="Ch8-2%20%E6%B7%B1%E5%BA%A6%E6%B5%8B%E8%AF%95%E5%92%8C%E6%B7%B1%E5%BA%A6%E5%8F%AF%E8%A7%86%E5%8C%96.html#id2">前一节</a>。
+        </p>
+    </li>
+</ul></section>
+<section id="gbuffer-frag-shader">
+<h3>GBuffer.frag.shader<a class="headerlink" href="#gbuffer-frag-shader" title="Permalink to this heading"></a></h3>
+<pre class="code">
+<span class="pragma">#version</span> 460
+<span class="pragma">#pragma shader_stage</span>(fragment)
+
+<span class="kw">layout</span>(location = 0) <span class="kw">in</span> <span class="type">vec4</span> i_NormalZ;
+<span class="kw">layout</span>(location = 1) <span class="kw">in</span> <span class="type">vec4</span> i_AlbedoSpecular;
+<span class="kw">layout</span>(location = 0) <span class="kw">out</span> <span class="type">vec4</span> o_NormalZ;
+<span class="kw">layout</span>(location = 1) <span class="kw">out</span> <span class="type">vec4</span> o_AlbedoSpecular;
+
+<span class="kw">void</span> <span class="fn">main</span>() {
+    o_NormalZ = i_NormalZ;
+    o_AlbedoSpecular = i_AlbedoSpecular;
+}
+</pre></section>
+<section id="composition-vert-shader">
+<h3>Composition.vert.shader<a class="headerlink" href="#composition-vert-shader" title="Permalink to this heading"></a></h3>
+<p>
+    绘制整个屏幕的范围。
+    <br>
+    输出NDC坐标的x和y到<span class="var">o_Position</span>，用于在片段着色器中求取世界空间中的位置坐标：
+</p>
+<pre class="code">
+<span class="pragma">#version</span> 460
+<span class="pragma">#pragma shader_stage</span>(vertex)
+
+<span class="type">vec2</span> positions[4] = {
+    { 0, 0 },
+    { 0, 1 },
+    { 1, 0 },
+    { 1, 1 }
+};
+
+<span class="kw">layout</span>(location = 0) <span class="kw">out</span> <span class="type">vec2</span> o_Position;
+
+<span class="kw">void</span> <span class="fn">main</span>() {
+    o_Position = positions[gl_VertexIndex];
+    gl_Position = <span class="type">vec4</span>(o_Position, 0, 1);
+}
+</pre></section>
+<section id="composition-frag-shader">
+<h3>Composition.frag.shader<a class="headerlink" href="#composition-frag-shader" title="Permalink to this heading"></a></h3>
+<p>
+    定义所有输入输出和可特化常量：
+</p>
+<pre class="code">
+<span class="pragma">#version</span> 460
+<span class="pragma">#pragma shader_stage</span>(fragment)
+
+<span class="type">struct</span> light {
+    <span class="type">vec3</span> position;
+    <span class="type">vec3</span> color;
+    <span class="kw">float</span> strength;
+};
+<span class="kw">layout</span>(constant_id = 0) <span class="kw">const uint</span> maxLightCount = 32;
+<span class="kw">layout</span>(constant_id = 1) <span class="kw">const uint</span> shininess = 32;
+
+<span class="kw">layout</span>(location = 0) <span class="kw">in</span> <span class="type">vec2</span> i_Position;
+<span class="kw">layout</span>(location = 0) <span class="kw">out</span> <span class="type">vec4</span> o_Color;
+<span class="kw">layout</span>(binding = 0) <span class="kw">uniform</span> descriptorConstants {
+    <span class="type">mat4</span> proj;
+    <span class="type">mat4</span> view;
+    <span class="kw">int</span> lightCount;
+    <span class="type">light</span> lights[maxLightCount];
+};
+<span class="kw">layout</span>(binding = 1, input_attachment_index = 0) <span class="kw">uniform</span> <span class="type">subpassInput</span> u_GBuffers[2];
+
+<span class="kw">void</span> <span class="fn">main</span>() {
+    <span class="cmt">/*待填充*/</span>
+}
+</pre>
+<ul>
+    <li>
+        <p>
+            涉及到的语法：<a class="reference internal" href="Ch4-1%20%E7%9D%80%E8%89%B2%E5%99%A8%E6%A8%A1%E7%BB%84.html#id13">输入附件的声明方式</a>、<a class="reference internal" href="Ch4-1%20%E7%9D%80%E8%89%B2%E5%99%A8%E6%A8%A1%E7%BB%84.html#id16">可特化常量的声明方式</a>。
+        </p>
+    </li>
+</ul>
+<p>
+    如前文所言，我们需要使用相机空间下的z值、NDC坐标的x和y、投影矩阵、观察矩阵，来算出每个片段对应的世界坐标系中的位置。
+    <br>
+    首先用GLSL的内置函数<span class="fn">subpassLoad</span>(...)读取相应片段位置上G-buffer的数据，参数不言自明：
+</p>
+<pre class="code">
+<span class="kw">void</span> <span class="fn">main</span>() {
+    <span class="type">vec3</span> position;
+    position.z = <span class="fn">subpassLoad</span>(u_GBuffers[0]).w;
+    <span class="type">vec3</span> normal = <span class="fn">normalize</span>(<span class="fn">subpassLoad</span>(u_GBuffers[0]).xyz);
+    <span class="type">vec3</span> albedo = <span class="fn">subpassLoad</span>(u_GBuffers[1]).xyz;
+    <span class="kw">float</span> specular = <span class="fn">subpassLoad</span>(u_GBuffers[1]).w;
+}
+</pre>
+<ul>
+    <li>
+        <p>
+            用GLSL的内置函数<span class="fn">normalize</span>(...)将法向量标准化（即归一化，使矢量模长为1），以使之后的点乘能正确反映法向量与其他向量的夹角。
+        </p>
+    </li>
+</ul><section id="id7">
+<h4>求取世界空间坐标<a class="headerlink" href="#id7" title="Permalink to this heading"></a></h4>
+<p>
+    来求取片段对应的世界空间坐标，首先得求取投影变换前的相机空间坐标。
+    <br>
+    下文给出计算方法，你也可以阅读<a class="reference internal" href="Ch8-2%20%E6%B7%B1%E5%BA%A6%E6%B5%8B%E8%AF%95%E5%92%8C%E6%B7%B1%E5%BA%A6%E5%8F%AF%E8%A7%86%E5%8C%96.html#id2">有关投影变换的数学</a>后自行推导。
+</p>
+<p>
+    现已经将相机坐标系下的z坐标存到了<span class="var">position.z</span>。
+    <br>
+    <span class="var">i_Position</span>中是NDC的x和y，它们乘以<span class="var">position.z</span>即为齐次剪裁空间坐标：
+</p>
+<pre class="code">
+<span class="cmt">//伪代码</span>
+齐次剪裁空间坐标.x == i_Position.x * position.z;
+齐次剪裁空间坐标.y == i_Position.y * position.z;
+</pre>
+<p>
+    从齐次剪裁空间坐标变到相机空间，即进行投影变换的逆变换。
+    <br>
+    对于glm::<span class="fn">perspective</span>(...)这种将相机坐标系的原点映射到视口中心的投影矩阵，对x和y的投影变换只不过是乘以一个系数：
+    <br>
+    <code>齐次剪裁空间坐标.x = 相机空间.x * 系数</code>
+    <br>
+    对于glm::<span class="fn">frustum</span>(...)这种可能将相机坐标系的原点映射到视口中心之外的投影矩阵，需要考虑偏移：
+    <code>齐次剪裁空间坐标.x = 相机空间.x * 系数 + 相机空间.z * 另一系数</code>（这里“另一系数”会乘以“相机空间.z”是因为偏移也得符合近大远小）
+    <br>
+    根据矩阵乘矢量的展开式可知，对于x坐标，这里的两个系数分别为<span class="var">proj[0][0]</span>和<span class="var">proj[2][0]</span>（注意GLM默认使用列主矩阵），将先前的伪代码等式代入上式，得到如下数学关系：
+</p>
+<pre class="code">
+<span class="cmt">//伪代码</span>
+i_Position.x * position.z == 相机空间.x * proj[0][0] + position.z * proj[2][0];
+
+<span class="cmt">//则：</span>
+相机空间.x == (i_Position.x - * proj[2][0]) * position.z / proj[0][0];
+</pre>
+<p>
+    对于y坐标以此类推。
+    <br>
+    相机空间的x和y坐标存到<span class="var">position.xy</span>，于是：
+</p>
+<pre class="code">
+position.x = (i_Position.x - proj[2][0]) * position.z / proj[0][0];
+position.y = (i_Position.y - proj[2][1]) * position.z / proj[1][1];
+</pre>
+<p>
+    接着进行“将世界坐标变到相机空间坐标”的逆变换，用观察矩阵的逆矩阵乘以相机空间坐标即可。
+    <br>
+    逆矩阵可由GLSL的内置函数<span class="fn">inverse</span>(...)求取：
+</p>
+<pre class="code">
+<span class="type">mat4</span> inverseView = <span class="fn">inverse</span>(view);
+position = (inverseView * <span class="kw">vec4</span>(position, 1)).xyz;
+</pre>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>
+    虽然这套教程有要求读者自备高中程度的数学知识，还是对数学原理略作解释吧。
+    <br>
+    <br>
+    逆矩阵与原矩阵相乘为单位矩阵：
+    <br>
+    <code>单位矩阵 == 逆观察矩阵 * 观察矩阵</code>
+    <br>
+    上式等号两侧都后乘世界空间坐标：
+    <br>
+    <code>单位矩阵 * 世界空间坐标 == 逆观察矩阵 * 观察矩阵 * 世界空间坐标</code>
+    <br>
+    矩阵乘法具有结合性（本质上是因为映射有结合性），进而：
+    <br>
+    <code>　　　　　 世界空间坐标 == 逆观察矩阵 * (观察矩阵 * 世界空间坐标)</code>即：<code>世界空间坐标 == 逆观察矩阵 * 相机空间坐标</code>
+</p>
+</div>
+<p>
+    从观察矩阵的逆矩阵还可以取得相机/观察者在世界空间中的位置，用逆观察矩阵乘以相机空间的原点即可：
+</p>
+<pre class="code">
+<span class="cmt">//vec3 cameraPosition = (inverseView * vec4(0, 0, 0, 1)).xyz;</span>
+<span class="cmt">//上式等价于下式</span>
+<span class="type">vec3</span> cameraPosition = { inverseView[3][0], inverseView[3][1], inverseView[3][2] };
+</pre></section>
+<section id="id8">
+<h4>光照计算<a class="headerlink" href="#id8" title="Permalink to this heading"></a></h4>
+<p>
+    进行光照计算，设定<span class="var">o_Color</span>初始值为全黑，然后遍历光源：
+</p>
+<pre class="code">
+o_Color = <span class="type">vec4</span>(0, 0, 0, 1);
+<span class="kw">for</span> (<span class="kw">uint</span> i = 0; i &lt; lightCount; i++) {
+    <span class="cmt">/*待填充*/</span>
+}
+</pre>
+<p>
+    计算辐照度：
+    <br>
+    点光源向四周发光，真空中不考虑光能被介质吸收，那么在每个距离光源一定半径的球面上的光能相等：
+    <br>
+    <code>距离光源为r的球面的面积 * 距离光源为r的球面上的辐照度 = 点光源的辐射通量</code>
+    <br>
+    球面面积公式是关于r的二次式，因此：对于点光源发射的光，照到真空中某点的辐照度，与该点到光源的距离成二次反比。
+    <br>
+    （虽然这应该是连初中生都能推理出来的常识，但直接上代码又会显得很突兀）
+</p>
+<pre class="code">
+<span class="type">vec3</span> toLight = lights[i].position - position;
+<span class="type">vec3</span> lightIntensity = lights[i].color * lights[i].strength / <span class="fn">pow</span>(<span class="fn">length</span>(toLight), 2);
+<span class="cmt">//↑我知道辐照度的英文不是intensity，不过这归根结底只是个用来计算的数值，不是严格对应物理量</span>
+</pre>
+<ul>
+    <li>
+        <p>
+            <span class="fn">pow</span>(...)是乘方。用<span class="fn">length</span>(...)求矢量模长。
+        </p>
+    </li>
+</ul>
+<p>
+    环境光就忽略了，计算漫反射，用<span class="fn">dot</span>(...)点乘求得入射角的余弦后钳制到不小于0：
+</p>
+<pre class="code">
+toLight = <span class="fn">normalize</span>(toLigt);
+o_Color.rgb += albedo * lightIntensity * <span class="fn">max</span>(<span class="fn">dot</span>(normal, toLight), 0);
+</pre>
+<p>
+    然后计算高光：
+</p>
+<pre class="code">
+<span class="type">vec3</span> toCamera = <span class="fn">normalize</span>(cameraPosition - position); <span class="cmt">//视线方向</span>
+<span class="type">vec3</span> halfway = <span class="fn">normalize</span>(toCamera + toLight);         <span class="cmt">//半程向量</span>
+o_Color.rgb += specular * lightIntensity * <span class="fn">pow</span>(<span class="fn">max</span>(<span class="fn">dot</span>(normal, halfway), 0), shininess);
+</pre>
+<p>
+    对代码进行整理，汇总如下：
+</p>
+<pre class="code">
+<span class="pragma">#version</span> 460
+<span class="pragma">#pragma shader_stage</span>(fragment)
+
+<span class="type">struct</span> light {
+    <span class="type">vec3</span> position;
+    <span class="type">vec3</span> color;
+    <span class="kw">float</span> strength;
+};
+<span class="kw">layout</span>(constant_id = 0) <span class="kw">const uint</span> maxLightCount = 32;
+<span class="kw">layout</span>(constant_id = 1) <span class="kw">const uint</span> shininess = 32;
+
+<span class="kw">layout</span>(location = 0) <span class="kw">in</span> <span class="type">vec2</span> i_Position;
+<span class="kw">layout</span>(location = 0) <span class="kw">out</span> <span class="type">vec4</span> o_Color;
+<span class="kw">layout</span>(binding = 0) <span class="kw">uniform</span> descriptorConstants {
+    <span class="type">mat4</span> proj;
+    <span class="type">mat4</span> view;
+    <span class="kw">int</span> lightCount;
+    <span class="type">light</span> lights[maxLightCount];
+};
+<span class="kw">layout</span>(binding = 1, input_attachment_index = 0) <span class="kw">uniform</span> <span class="type">subpassInput</span> u_GBuffers[2];
+
+<span class="kw">void</span> <span class="fn">main</span>() {
+    <span class="type">mat4</span> inverseView = <span class="fn">inverse</span>(view);
+    <span class="type">vec3</span> cameraPosition = { inverseView[3][0], inverseView[3][1], inverseView[3][2] };
+    <span class="type">vec3</span> position;
+    position.z = <span class="fn">subpassLoad</span>(u_GBuffers[0]).w;
+    position.x = (i_Position.x - proj[2][0]) * position.z / proj[0][0];
+    position.y = (i_Position.y - proj[2][1]) * position.z / proj[1][1];
+    position = (inverseView * <span class="type">vec4</span>(position, 1)).xyz;
+    <span class="type">vec3</span> normal = <span class="fn">normalize</span>(<span class="fn">subpassLoad</span>(u_GBuffers[0]).xyz);
+    <span class="type">vec3</span> albedo = <span class="fn">subpassLoad</span>(u_GBuffers[1]).xyz;
+    <span class="kw">float</span> specular = <span class="fn">subpassLoad</span>(u_GBuffers[1]).w;
+
+    o_Color = <span class="type">vec4</span>(0, 0, 0, 1);
+    <span class="kw">for</span> (<span class="kw">uint</span> i = 0; i &lt; lightCount; i++) {
+        <span class="type">vec3</span> toLight = lights[i].position - position;
+        <span class="type">vec3</span> lightIntensity = lights[i].color * lights[i].strength / <span class="fn">pow</span>(<span class="fn">length</span>(toLight), 2);
+        toLight = <span class="fn">normalize</span>(toLigt);
+        <span class="type">vec3</span> halfway = <span class="fn">normalize</span>(<span class="cmt">/*toCamera*/</span><span class="fn">normalize</span>(cameraPosition - position) + toLight);
+        o_Color.rgb += lightIntensity * (
+            albedo * <span class="fn">max</span>(<span class="fn">dot</span>(normal, toLight), 0) +
+            specular * <span class="fn">pow</span>(<span class="fn">max</span>(<span class="fn">dot</span>(normal, halfway), 0), shininess));
+    }
+}
+</pre></section>
+</section>
+<section id="id9">
+<h3>创建管线<a class="headerlink" href="#id9" title="Permalink to this heading"></a></h3>
+<p>
+    惯例：
+</p>
+<pre class="code">
+<span class="type">descriptorSetLayout</span> descriptorSetLayout_gBuffer;
+<span class="type">pipelineLayout</span> pipelineLayout_gBuffer;
+<span class="type">pipeline</span> pipeline_gBuffer;
+<span class="type">descriptorSetLayout</span> descriptorSetLayout_composition;
+<span class="type">pipelineLayout</span> pipelineLayout_composition;
+<span class="type">pipeline</span> pipeline_composition;
+<span class="kw">const auto</span>&amp; <span class="fn">RenderPassAndFramebuffers_Screen</span>() {
+    <span class="kw">static const auto</span>&amp; rpwf = easyVulkan::<span class="fn">CreateRpwf_DeferredToScreen</span>();
+    <span class="kw">return</span> rpwf;
+}
+<span class="kw">void</span> <span class="fn">CreateLayout</span>() {
+    <span class="cmt">/*待填充*/</span>
+}
+<span class="kw">void</span> <span class="fn">CreatePipeline</span>() {
+    <span class="cmt">/*待填充*/</span>
+}
+</pre>
+<p>
+    创建管线布局：
+</p>
+<pre class="code">
+<span class="kw">void</span> <span class="fn">CreateLayout</span>() {
+    <span class="cmt">//G-buffer</span>
+    <span class="type">VkDescriptorSetLayoutBinding</span> descriptorSetLayoutBinding_gBuffer = { 0, <span class="enum">VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER</span>, 1, <span class="enum">VK_SHADER_STAGE_VERTEX_BIT</span> };
+    <span class="type">VkDescriptorSetLayoutCreateInfo</span> descriptorSetLayoutCreateInfo = {
+        .bindingCount = 1,
+        .pBindings = &amp;descriptorSetLayoutBinding_gBuffer
+    };
+    descriptorSetLayout_gBuffer.<span class="fn">Create</span>(descriptorSetLayoutCreateInfo);
+    <span class="type">VkPipelineLayoutCreateInfo</span> pipelineLayoutCreateInfo = {
+        .setLayoutCount = 1,
+        .pSetLayouts = descriptorSetLayout_gBuffer.<span class="fn">Address</span>()
+    };
+    pipelineLayout_gBuffer.<span class="fn">Create</span>(pipelineLayoutCreateInfo);
+    <span class="cmt">//Composition</span>
+    <span class="type">VkDescriptorSetLayoutBinding</span> descriptorSetLayoutBindings_composition[2] = {
+        { 0, <span class="enum">VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER</span>, 1, <span class="enum">VK_SHADER_STAGE_FRAGMENT_BIT</span> },
+        { 1, <span class="enum">VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT</span>, 2, <span class="enum">VK_SHADER_STAGE_FRAGMENT_BIT</span> }
+    };
+    descriptorSetLayoutCreateInfo.bindingCount = 2;
+    descriptorSetLayoutCreateInfo.pBindings = descriptorSetLayoutBindings_composition;
+    descriptorSetLayout_composition.<span class="fn">Create</span>(descriptorSetLayoutCreateInfo);
+    pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayout_composition.<span class="fn">Address</span>();
+    pipelineLayout_composition.<span class="fn">Create</span>(pipelineLayoutCreateInfo);
+}
+</pre>
+<p>
+    创建各个着色器模组：
+</p>
+<pre class="code">
+<span class="kw">void</span> <span class="fn">CreatePipeline</span>() {
+    <span class="kw">static</span> <span class="type">shaderModule</span> vert_gBuffer(<span class="str">"shader/GBuffer.vert.spv"</span>);
+    <span class="kw">static</span> <span class="type">shaderModule</span> frag_gBuffer(<span class="str">"shader/GBuffer.frag.spv"</span>);
+    <span class="type">VkPipelineShaderStageCreateInfo</span> shaderStageCreateInfos_gBuffer[2] = {
+        vert_gBuffer.<span class="fn">StageCreateInfo</span>(<span class="enum">VK_SHADER_STAGE_VERTEX_BIT</span>),
+        frag_gBuffer.<span class="fn">StageCreateInfo</span>(<span class="enum">VK_SHADER_STAGE_FRAGMENT_BIT</span>)
+    };
+    <span class="kw">static</span> <span class="type">shaderModule</span> vert_composition(<span class="str">"shader/Composition.vert.spv"</span>);
+    <span class="kw">static</span> <span class="type">shaderModule</span> frag_composition(<span class="str">"shader/Composition.frag.spv"</span>);
+    <span class="type">VkPipelineShaderStageCreateInfo</span> shaderStageCreateInfos_composition[2] = {
+        vert_composition.<span class="fn">StageCreateInfo</span>(<span class="enum">VK_SHADER_STAGE_VERTEX_BIT</span>),
+        frag_composition.<span class="fn">StageCreateInfo</span>(<span class="enum">VK_SHADER_STAGE_FRAGMENT_BIT</span>)
+    };
+    <span class="cmt">/*待填充*/</span>
+}
+</pre>
+<p>
+    趁此机会尝试特化着色器中的常量。
+    <br>
+    先前在<span class="path">Composition.frag.shader</span>中，常量<span class="var">shininess</span>的数值是32，现将其特化为64，特化信息如下：
+</p>
+<pre class="code">
+<span class="kw">static constexpr</span> <span class="type">int32_t</span> shininess = 64;
+<span class="kw">static</span> <span class="type">VkSpecializationMapEntry</span> mapEntry = {
+    1,                <span class="cmt">//constantID，被特化常量在着色器中的的ID</span>
+    0,                <span class="cmt">//offset，特化数据在VkSpecializationInfo::pData中的起始位置</span>
+    <span class="kw">sizeof</span> shininess  <span class="cmt">//size，特化数据的大小，单位为字节</span>
+};
+<span class="kw">static</span> <span class="type">VkSpecializationInfo</span> specializationInfo = {
+    1,                <span class="cmt">//mapEntryCount</span>
+    &amp;mapEntry,        <span class="cmt">//pMapEntries</span>
+    <span class="kw">sizeof</span> shininess, <span class="cmt">//dataSize</span>
+    &amp;shininess        <span class="cmt">//pData</span>
+};
+</pre>
+<p>
+    创建管线：
+</p>
+<pre class="code">
+<span class="kw">auto</span> Create = [] {
+    <span class="cmt">//G-buffer</span>
+    <span class="type">graphicsPipelineCreateInfoPack</span> pipelineCiPack;
+    pipelineCiPack.createInfo.layout = pipelineLayout_gBuffer;
+    pipelineCiPack.createInfo.renderPass = <span class="type">RenderPassAndFramebuffers</span>().renderPass;
+    pipelineCiPack.createInfo.subpass = 0;
+    pipelineCiPack.vertexInputBindings.<span class="fn">emplace_back</span>(0, <span class="kw">sizeof</span>(vertex), <span class="enum">VK_VERTEX_INPUT_RATE_VERTEX</span>);
+    pipelineCiPack.vertexInputBindings.<span class="fn">emplace_back</span>(1, <span class="kw">sizeof</span>(glm::<span class="type">vec3</span>), <span class="enum">VK_VERTEX_INPUT_RATE_INSTANCE</span>);
+    pipelineCiPack.vertexInputAttributes.<span class="fn">emplace_back</span>(0, 0, <span class="enum">VK_FORMAT_R32G32B32_SFLOAT</span>, <span class="mcr">offsetof</span>(<span class="type">vertex</span>, position));
+    pipelineCiPack.vertexInputAttributes.<span class="fn">emplace_back</span>(1, 0, <span class="enum">VK_FORMAT_R32G32B32_SFLOAT</span>, <span class="mcr">offsetof</span>(<span class="type">vertex</span>, normal));
+    pipelineCiPack.vertexInputAttributes.<span class="fn">emplace_back</span>(2, 0, <span class="enum">VK_FORMAT_R32G32B32A32_SFLOAT</span>, <span class="mcr">offsetof</span>(<span class="type">vertex</span>, albedoSpecular));
+    pipelineCiPack.vertexInputAttributes.<span class="fn">emplace_back</span>(3, 1, <span class="enum">VK_FORMAT_R32G32B32_SFLOAT</span>, 0);
+    pipelineCiPack.inputAssemblyStateCi.topology = <span class="enum">VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST</span>;
+    pipelineCiPack.viewports.<span class="fn">emplace_back</span>(0.f, 0.f, <span class="kw">float</span>(windowSize.width), <span class="kw">float</span>(windowSize.height), 0.f, 1.f);
+    pipelineCiPack.scissors.<span class="fn">emplace_back</span>(<span class="type">VkOffset2D</span>{}, windowSize);
+    pipelineCiPack.rasterizationStateCi.cullMode = <span class="enum">VK_CULL_MODE_BACK_BIT</span>;
+    pipelineCiPack.rasterizationStateCi.frontFace = <span class="enum">VK_FRONT_FACE_COUNTER_CLOCKWISE</span>;
+    pipelineCiPack.multisampleStateCi.rasterizationSamples = <span class="enum">VK_SAMPLE_COUNT_1_BIT</span>;
+    pipelineCiPack.depthStencilStateCi.depthTestEnable = <span class="mcr">VK_TRUE</span>;
+    pipelineCiPack.depthStencilStateCi.depthWriteEnable = <span class="mcr">VK_TRUE</span>;
+    pipelineCiPack.depthStencilStateCi.depthCompareOp = <span class="enum">VK_COMPARE_OP_LESS</span>;
+    pipelineCiPack.colorBlendAttachmentStates.<span class="fn">resize</span>(2); <span class="cmt">//生成G-buffer的管线输出到两个图像附件，两个都要指定混色方式</span>
+    pipelineCiPack.colorBlendAttachmentStates[0].colorWriteMask = 0b1111;
+    pipelineCiPack.colorBlendAttachmentStates[1].colorWriteMask = 0b1111;
+    pipelineCiPack.<span class="fn">UpdateAllArrays</span>();
+    pipelineCiPack.createInfo.stageCount = 2;
+    pipelineCiPack.createInfo.pStages = shaderStageCreateInfos_gBuffer;
+    pipeline_gBuffer.<span class="fn">Create</span>(pipelineCiPack);
+    <span class="cmt">//Composition</span>
+    pipelineCiPack.createInfo.layout = pipelineLayout_composition;
+    pipelineCiPack.createInfo.subpass = 1;
+    pipelineCiPack.createInfo.pStages = shaderStageCreateInfos_composition;
+    pipelineCiPack.vertexInputStateCi.vertexBindingDescriptionCount = 0; <span class="cmt">//Composition.vert.shader不需要输入顶点数据</span>
+    pipelineCiPack.vertexInputStateCi.vertexAttributeDescriptionCount = 0;
+    pipelineCiPack.inputAssemblyStateCi.topology = <span class="enum">VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP</span>;
+    pipelineCiPack.colorBlendStateCi.attachmentCount = 1;
+    pipeline_composition.<span class="fn">Create</span>(pipelineCiPack);
+};
+<span class="kw">auto</span> Destroy = [] {
+    pipeline_gBuffer.<span class="fn">~pipeline</span>();
+    pipeline_composition.<span class="fn">~pipeline</span>();
+};
+<span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">AddCallback_CreateSwapchain</span>(Create);
+<span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">AddCallback_DestroySwapchain</span>(Destroy);
+Create();
+</pre></section>
+</section>
+<section id="id10">
+<h2>写入描述符<a class="headerlink" href="#id10" title="Permalink to this heading"></a></h2>
+<p>
+    使用输入附件同使用贴图一样，需要为其创建描述符。
+    <br>
+    首先分配描述符，生成G-buffer的子通道需要一个uniform缓冲区的描述符，composition的子通道需要一个uniform缓冲区的描述符和两个输入附件的描述符：
+</p>
+<pre class="code">
+<span class="type">VkDescriptorPoolSize</span> descriptorPoolSizes[] = {
+    { <span class="enum">VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER</span>, 2 },
+    { <span class="enum">VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT</span>, 2 }
+};
+<span class="type">descriptorPool</span> descriptorPool(2, descriptorPoolSizes);
+<span class="type">descriptorSet</span> descriptorSet_gBuffer;
+<span class="kw">static</span> <span class="type">descriptorSet</span> descriptorSet_composition; <span class="cmt">//static修饰的原因见后文的lambda</span>
+descriptorPool.<span class="fn">AllocateSets</span>(descriptorSet_gBuffer, descriptorSetLayout_gBuffer);
+descriptorPool.<span class="fn">AllocateSets</span>(descriptorSet_composition, descriptorSetLayout_composition);
+</pre>
+<p>
+    首先写入uniform缓冲区的信息：
+</p>
+<pre class="code">
+<span class="type">VkDescriptorBufferInfo</span> bufferInfos[] = {
+    { uniformBuffer, 0, <span class="kw">sizeof</span>(glm::<span class="type">mat4</span>) * 2 }, <span class="cmt">//G-buffer的子通道中只要proj和view</span>
+    { uniformBuffer, 0, <span class="mcr">VK_WHOLE_SIZE</span> }
+};
+descriptorSet_gBuffer.<span class="fn">Write</span>(bufferInfos[0], <span class="enum">VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER</span>, 0, 0);
+descriptorSet_composition.<span class="fn">Write</span>(bufferInfos[1], <span class="enum">VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER</span>, 0, 0);
+</pre>
+<p>
+    被用作输入附件的图像会在重建交换链时被一并重新创建，因此定义回调函数来写入输入附件对应的描述符。
+    <br>
+    除了不需要采样器，及描述符类型不同以外，提供给描述符的输入附件信息跟一般的贴图信息类似：
+</p>
+<pre class="code">
+<span class="kw">auto</span> UpdateDescriptorSet_InputAttachments = [] {
+    <span class="type">VkDescriptorImageInfo</span> imageInfos[2] = {
+        { <span class="mcr">VK_NULL_HANDLE</span>, easyVulkan::ca_deferredToScreen_normalZ.<span class="fn">ImageView</span>(), <span class="enum">VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL</span> },
+        { <span class="mcr">VK_NULL_HANDLE</span>, easyVulkan::ca_deferredToScreen_albedoSpecular.<span class="fn">ImageView</span>(), <span class="enum">VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL</span> },
+    };
+    descriptorSet_composition.<span class="fn">Write</span>(
+        imageInfos,
+        <span class="enum">VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT</span>,
+        1, <span class="cmt">//dstBinding</span>
+        0  <span class="cmt">//dstArrayElement</span>
+    );
+};
+<span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">AddCallback_CreateSwapchain</span>(UpdateDescriptorSet_InputAttachments);
+UpdateDescriptorSet_InputAttachments();
+</pre></section>
+<section id="id11">
+<h2>绘制<a class="headerlink" href="#id11" title="Permalink to this heading"></a></h2>
+<pre class="code">
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="cmt">/*...前面略*/</span>
+
+    <span class="type">VkClearValue</span> clearValues[4] = {
+        { .color = {} },
+        { .color = {} },
+        { .color = {} },
+        { .depthStencil = { 1.f, 0 } }
+    };
+
+    <span class="kw">while</span> (!<span class="fn">glfwWindowShouldClose</span>(pWindow)) {
+        <span class="kw">while</span> (<span class="fn">glfwGetWindowAttrib</span>(pWindow, <span class="mcr">GLFW_ICONIFIED</span>))
+            <span class="fn">glfwWaitEvents</span>();
+
+        <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">SwapImage</span>(semaphore_imageIsAvailable);
+        <span class="kw">auto</span> i = <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">CurrentImageIndex</span>();
+        commandBuffer.<span class="fn">Begin</span>(<span class="enum">VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT</span>);
+
+        renderPass.<span class="fn">CmdBegin</span>(commandBuffer, framebuffers[i], { {}, windowSize }, clearValues);
+
+        <span class="cmt">/*待填充*/</span>
+
+        renderPass.<span class="fn">CmdEnd</span>();
+
+        commandBuffer.<span class="fn">End</span>();
+        <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">SubmitCommandBuffer_Graphics</span>(commandBuffer, semaphore_imageIsAvailable, semaphore_renderingIsOver, fence);
+        <span class="type">graphicsBase</span>::<span class="sfn">Base</span>().<span class="fn">PresentImage</span>(semaphore_renderingIsOver);
+
+        <span class="fn">glfwPollEvents</span>();
+        <span class="fn">TitleFps</span>();
+
+        fence.<span class="fn">WaitAndReset</span>();
+    }
+    <span class="fn">TerminateWindow</span>();
+    <span class="kw">return</span> 0;
+}
+</pre>
+<p>
+    生成G-buffer的子通道：
+</p>
+<pre class="code">
+<span class="fn">vkCmdBindPipeline</span>(commandBuffer, <span class="enum">VK_PIPELINE_BIND_POINT_GRAPHICS</span>, pipeline_gBufferd);
+<span class="type">VkBuffer</span> buffers[2] = { vertexBuffer_perVertex, vertexBuffer_perInstance };
+<span class="type">VkDeviceSize</span> offsets[2] = {};
+<span class="fn">vkCmdBindVertexBuffers</span>(commandBuffer, 0, 2, buffers, offsets);
+<span class="fn">vkCmdBindIndexBuffer</span>(commandBuffer, indexBuffer, 0, <span class="enum">VK_INDEX_TYPE_UINT16</span>);
+<span class="fn">vkCmdBindDescriptorSets</span>(commandBuffer, <span class="enum">VK_PIPELINE_BIND_POINT_GRAPHICS</span>, pipelineLayout_gBuffer, 0, 1, descriptorSet_gBuffer.<span class="fn">Address</span>(), 0, <span class="kw">nullptr</span>);
+<span class="fn">vkCmdDrawIndexed</span>(commandBuffer, 36, 12, 0, 0, 0);
+</pre>
+<p>
+    然后进入composition的子通道：
+</p>
+<pre class="code">
+renderPass.<span class="fn">CmdNext</span>(commandBuffer);
+</pre>
+<p>
+    管线的图元拓扑类型为<span class="enum">VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP</span>，绘制整个画面需要四个顶点：
+</p>
+<pre class="code">
+<span class="fn">vkCmdBindPipeline</span>(commandBuffer, <span class="enum">VK_PIPELINE_BIND_POINT_GRAPHICS</span>, pipeline_composition);
+<span class="fn">vkCmdBindDescriptorSets</span>(commandBuffer, <span class="enum">VK_PIPELINE_BIND_POINT_GRAPHICS</span>, pipelineLayout_composition, 0, 1, descriptorSet_composition.<span class="fn">Address</span>(), 0, <span class="kw">nullptr</span>);
+<span class="fn">vkCmdDraw</span>(commandBuffer, 4, 1, 0, 0);
+</pre>
+<p>
+    运行程序，效果已在前文展示。
+</p></section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Ch8-2%20%E6%B7%B1%E5%BA%A6%E6%B5%8B%E8%AF%95%E5%92%8C%E6%B7%B1%E5%BA%A6%E5%8F%AF%E8%A7%86%E5%8C%96.html" class="btn btn-neutral float-left" title="Ch8-2 深度测试和深度可视化" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> 上一页</a>
+        <a href="Ch8-4%20%E9%A2%84%E4%B9%98Alpha.html" class="btn btn-neutral float-right" title="Ch8-4 预乘Alpha" accesskey="n" rel="next">下一页 <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021-2024, Qiao YeCheng.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
