@@ -11,6 +11,12 @@ class TOptional
 	using ElementType = T;
 	using DataType = typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type;
 public:
+	explicit TOptional(const TOptional& Other)
+	: bSet(Other.bSet)
+	{
+		new(&Data) ElementType(*(const ElementType*)&Other.Data);
+	}
+	
 	explicit TOptional(const ElementType& Other)
 	: bSet(true)
 	{
