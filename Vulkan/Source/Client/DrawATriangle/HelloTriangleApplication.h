@@ -1,7 +1,8 @@
 ﻿#pragma once
 
-
+//#define GLM_ENABLE_EXPERIMENTAL
 #define VK_USE_PLATFORM_WIN32_KHR
+#define GLM_FORCE_RADIANS
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -68,14 +69,22 @@ const std::vector<uint16_t> Indices = {
     0, 1, 2, 2, 3, 0
 };
 
+
+struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
 struct FQueueFamilyIndices
 {
     FQueueFamilyIndices() = default;
     
     FQueueFamilyIndices(const FQueueFamilyIndices& Other)
+    : GraphicsFamily(Other.GraphicsFamily)
+    , PresentFamily(Other.PresentFamily)
     {
-        GraphicsFamily = Other.GraphicsFamily;
-        PresentFamily = Other.PresentFamily;
+        
     }
     
     TOptional<uint32> GraphicsFamily;
@@ -151,6 +160,7 @@ private:
     std::vector<VkFramebuffer> SwapChainFramebuffers;
     
     VkRenderPass RenderPass;
+    VkDescriptorSetLayout DescriptorSetLayout;
     VkPipelineLayout PipelineLayout;
 
     VkPipeline GraphicsPipeline;
@@ -160,6 +170,10 @@ private:
 
     VkBuffer IndexBuffer;
     VkDeviceMemory IndexBufferMemory;
+
+    std::vector<VkBuffer> UniformBuffers;
+    std::vector<VkDeviceMemory> UniformBuffersMemory;
+    std::vector<void*> UniformBuffersMapped;
     
     std::vector<VkCommandBuffer> CommandBuffers;
     VkCommandPool CommandPool;
@@ -168,6 +182,7 @@ private:
     std::vector<VkSemaphore> ImageAvailableSemaphores;
     std::vector<VkSemaphore> RenderFinishedSemaphores;
     std::vector<VkFence> InFlightFences;
+
     
 private:
     void InitWindow();
@@ -177,6 +192,7 @@ private:
     void CreateSwapChain();
     void CreateImageViews();
     void CreateRenderPass();
+    void CreateDescriptorSetLayout();
     void CreateGraphicsPipeline();
     void CreateFrameBuffers();
     void CreateSyncObjects();
@@ -186,6 +202,8 @@ private:
     
     void DrawFrame();
     
+    void UpdateUniformBuffer(uint32 FrameIndex);
+
     VkShaderModule CreateShaderModule(const std::vector<char>& code);
     
     // for swap chain
@@ -200,12 +218,13 @@ private:
     void CreateCommandBuffers();
     void RecordCommandBuffer(VkCommandBuffer InCommandBuffer, uint32 InImageIndex);
 
-    void CreateBuffer(VkDeviceSize InBufferSize, VkBufferUsageFlags InBufferUsage, VkMemoryPropertyFlags properties,
-        VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-    void CreateVertexBuffer();
+    void CreateBuffer(VkDeviceSize InBufferSize, VkBufferUsageFlags InBufferUsage,
+        VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
+    void CreateVertexBuffer();
     void CreateIndexBuffer();
+    void CreateUniformBuffers();
     
     uint32 FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties) ;
     

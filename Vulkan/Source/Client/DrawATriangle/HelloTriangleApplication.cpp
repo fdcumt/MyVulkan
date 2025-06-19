@@ -5,9 +5,11 @@
 #include <limits>
 
 #include "FileHelper/FileHelper.h"
+#include <glm/gtc/matrix_transform.hpp>
 #include "Log/Log.h"
 #include "Math/MathUtility.h"
 #include "Misc/Path.h"
+
 
 
 VkBool32 DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -63,12 +65,14 @@ void HelloTriangleApplication::InitVulkan()
     CreateSwapChain();
     CreateImageViews();
     CreateRenderPass();
+    CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreateCommandPool();
     CreateCommandPoolForCopy();
     CreateVertexBuffer();
     CreateIndexBuffer();
+    CreateUniformBuffers();
     CreateCommandBuffers();
     CreateSyncObjects();
 }
@@ -255,6 +259,23 @@ void HelloTriangleApplication::CreateRenderPass()
     check(vkCreateRenderPass(LogicDevice, &renderPassInfo, nullptr, &RenderPass) == VK_SUCCESS)
 }
 
+void HelloTriangleApplication::CreateDescriptorSetLayout()
+{
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.pImmutableSamplers = nullptr;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
+
+    check(vkCreateDescriptorSetLayout(LogicDevice, &layoutInfo, nullptr, &DescriptorSetLayout) == VK_SUCCESS)
+}
+
 void HelloTriangleApplication::CreateGraphicsPipeline()
 {
     VKFollowLog("CreateGraphicsPipeline begin");
@@ -353,8 +374,9 @@ void HelloTriangleApplication::CreateGraphicsPipeline()
     VKFollowLog("fill VkPipelineLayoutCreateInfo");
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &DescriptorSetLayout;
+    //pipelineLayoutInfo.pushConstantRangeCount = 0;
 
     VKFollowLog("vkCreatePipelineLayout");
     check(vkCreatePipelineLayout(LogicDevice, &pipelineLayoutInfo, nullptr, &PipelineLayout) == VK_SUCCESS);
@@ -489,6 +511,8 @@ void HelloTriangleApplication::DrawFrame()
     {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
+    
+    UpdateUniformBuffer(CurrentFrame);
 
     vkResetFences(LogicDevice, 1, &InFlightFences[CurrentFrame]);
     
@@ -542,6 +566,21 @@ void HelloTriangleApplication::DrawFrame()
     }
     
     CurrentFrame = (CurrentFrame + 1) % MaxFrameInFlight;
+}
+
+void HelloTriangleApplication::UpdateUniformBuffer(uint32 FrameIndex)
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    UniformBufferObject ubo{};
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f), SwapChainExtent.width / (float) SwapChainExtent.height, 0.1f, 10.0f);
+    ubo.proj[1][1] *= -1;
+
+    memcpy(UniformBuffersMapped[FrameIndex], &ubo, sizeof(ubo));
 }
 
 void HelloTriangleApplication::CreateCommandPool()
@@ -823,6 +862,24 @@ void HelloTriangleApplication::CreateIndexBuffer()
     vkFreeMemory(LogicDevice, stagingBufferMemory, nullptr);
 }
 
+void HelloTriangleApplication::CreateUniformBuffers()
+{
+    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+    UniformBuffers.resize(MaxFrameInFlight);
+    UniformBuffersMemory.resize(MaxFrameInFlight);
+    UniformBuffersMapped.resize(MaxFrameInFlight);
+
+    for (size_t i = 0; i < MaxFrameInFlight; i++)
+    {
+        CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            UniformBuffers[i], UniformBuffersMemory[i]);
+
+        vkMapMemory(LogicDevice, UniformBuffersMemory[i], 0, bufferSize, 0, &UniformBuffersMapped[i]);
+    }
+}
+
 uint32 HelloTriangleApplication::FindMemoryType(uint32 typeFilter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -985,7 +1042,15 @@ void HelloTriangleApplication::Cleanup()
         vkDestroyFence(LogicDevice, InFlightFences[i], nullptr);
     }
 
-
+    for (size_t i = 0; i < MaxFrameInFlight; i++)
+    {
+        vkDestroyBuffer(LogicDevice, UniformBuffers[i], nullptr);
+        vkFreeMemory(LogicDevice, UniformBuffersMemory[i], nullptr);
+    }
+    
+    VKFollowLog("vkDestroyDescriptorSetLayout")
+    vkDestroyDescriptorSetLayout(LogicDevice, DescriptorSetLayout, nullptr);
+    
     // CommandPool销毁时会自动销毁其内部的Commandbuffer, 所以不用再处理CommandBuffer.
     VKFollowLog("vkDestroyCommandPool");
     vkDestroyCommandPool(LogicDevice, CommandPool, nullptr);
